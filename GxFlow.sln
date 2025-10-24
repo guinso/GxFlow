@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36408.4
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GxFlow.WorkflowEngine", "WorkflowEngine\GxFlow.WorkflowEngine.csproj", "{49361AD7-FF34-491C-80B3-0CF14B3B8D96}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestWorkflowEngine", "TestWorkflowEngine\TestWorkflowEngine.csproj", "{7AFFA120-84F7-4B92-BAE9-E8BFB9B7C41F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{49361AD7-FF34-491C-80B3-0CF14B3B8D96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49361AD7-FF34-491C-80B3-0CF14B3B8D96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49361AD7-FF34-491C-80B3-0CF14B3B8D96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49361AD7-FF34-491C-80B3-0CF14B3B8D96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7AFFA120-84F7-4B92-BAE9-E8BFB9B7C41F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AFFA120-84F7-4B92-BAE9-E8BFB9B7C41F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AFFA120-84F7-4B92-BAE9-E8BFB9B7C41F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AFFA120-84F7-4B92-BAE9-E8BFB9B7C41F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FBBA72F8-86D1-4D4C-9DD9-9FABB2AAE889}
+	EndGlobalSection
+EndGlobal
