@@ -73,7 +73,7 @@ namespace TestWorkflowEngine.DataModel.Script
         [TestMethod]
         public void TestCompileToDll()
         {
-            var (asmRaw, pdbRaw) = CSharpHelper.CompileToDll(_sourceCode);
+            var (asmRaw, pdbRaw) = CSharpHelper.CompileToDll([_sourceCode]);
 
             var appContext = new AssemblyLoadContext("exampleAsmContext", true);
             using(var stream = new  MemoryStream(asmRaw))

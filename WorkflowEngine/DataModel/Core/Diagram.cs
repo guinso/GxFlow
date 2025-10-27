@@ -11,13 +11,15 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
     public interface IDiagram: IGraphObj, IGraphRunnable
     {
         SerializableDictionary<string, object> Variables { get; }
+
+        IEnumerable<INode> Nodes { get; }
+
+        IEnumerable<IFlow> Flows { get; }
     }
 
     public interface IDiagramExt: IDiagram, IScriptTransformer
     {
-        List<INodeExt> Nodes { get; }
-
-        List<IFlowExt> Flows { get; }
+        
     }
 
     [Serializable]
@@ -41,10 +43,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
         #region properties nodes
         [XmlIgnore]
-        public List<INodeExt> Nodes => XmlNodes.ListItems;
-
-        //[XmlIgnore]
-        //public List<INodeExt> ExtNodes { get => XmlNodes.ListItems; }
+        public IEnumerable<INode> Nodes => XmlNodes.ListItems.Select(x => x);
 
         [XmlElement("nodes")]
         public XmlHolderArr<INodeExt> XmlNodes { get; set; } = new XmlHolderArr<INodeExt>();
@@ -52,13 +51,10 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
         #region properties flows
         [XmlIgnore]
-        public List<IFlowExt> Flows => FlowXML.ListItems;
-
-        //[XmlIgnore]
-        //public List<IFlowExt> FlowList { get => FlowXML.ListItems; }
+        public IEnumerable<IFlow> Flows => XmlFlows.ListItems.Select(x => x);
 
         [XmlElement("flows")]
-        public XmlHolderArr<IFlowExt> FlowXML { get; set; } = new XmlHolderArr<IFlowExt>();
+        public XmlHolderArr<IFlowExt> XmlFlows { get; set; } = new XmlHolderArr<IFlowExt>();
         #endregion
 
         [XmlElement("variables")]
@@ -125,22 +121,15 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
             string inodeTypeName = typeof(INode).FullName;
             string serializableTypeName = "GxFlow.WorkflowEngine.DataModel.Core.SerializableDictionary<string, object>";
-            string dicNodeTypeName = $"Dictionary<string, {inodeTypeName}>";
+            //string dicNodeTypeName = $"Dictionary<string, {inodeTypeName}>";
+
+            vars = MakeVars();
 
             string code = @$"
-            using System;
-            using System.Collections.Generic;
-            using System.Linq;
-            using System.Text;
-            using System.Threading;
-            using System.Threading.Tasks;
-
-            namespace GxFlow.WorkflowEngine.Compiled {{
                 public class {diagramClasName}: {typeof(IDiagram).FullName} {{
 
                     protected Task _task = Task.CompletedTask;
-                    protected {dicNodeTypeName} Nodes = new {dicNodeTypeName}();
-                    
+
                     public string ID => ""{ID}"";
 
                     public string TypeName => ""{diagramClasName}"";
@@ -152,17 +141,13 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
                     public {serializableTypeName} Variables {{get; protected set; }} =  new {serializableTypeName}();
 
                     #region node variables
-                    {GenCodeNodeDeclare()}
+                    {GenCodeNodeVariables()}
                     #endregion
 
                     public {diagramClasName}()
                     {{
                         #region global variables
                         {GenCodeGlobalVarInit()}
-                        #endregion
-
-                        #region node variables
-                        {GenCodeNodesVarInit()}
                         #endregion
                     }}
 
@@ -181,46 +166,52 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
                     }}
                 }}
 
-                #region node class definition
-                {GenCodeNodeDef(vars)}
-                #endregion
-            }}";
+            #region node class definition
+            {GenCodeNodeSourceCode(vars)}
+            #endregion";
 
             return code;
         }
 
-        protected virtual string GenCodeNodeDeclare()
+        protected virtual string GenCodeNodeVariables()
         {
+            string INodeTypeName = typeof(INode).FullName;
+            string IFlowTypeName = typeof(IFlow).FullName;
+            string dicNodeTypeName = $"Dictionary<string, {INodeTypeName}>";
+
             var strBuilder = new StringBuilder();
 
             foreach (var node in Nodes)
             {
                 string className = $"{ node.GetType().Name }_{ node.ID}";
 
-                strBuilder.AppendLine($"{className} m_{className} = new {className}();");
+                strBuilder.AppendLine($"protected {className} m_{className} = new {className}();");
             }
 
-            return strBuilder.ToString();
-        }
-
-        protected virtual string GenCodeNodesVarInit()
-        {
-            var strBuilder = new StringBuilder();
-            
-
+            //declare IEnumrable<INode> Nodes
+            strBuilder.AppendLine($"public IEnumerable<{INodeTypeName}> Nodes => [");
             foreach (var node in Nodes)
             {
-                string className = $"{node.GetType().Name}_{node.ID}";
-
-                strBuilder.AppendLine($"Nodes[\"{node.ID}\"] = m_{className};");
+                strBuilder.AppendLine($"m_{node.GetType().Name}_{node.ID},");
+                
             }
+            strBuilder.AppendLine("];");
+            strBuilder.AppendLine();
+
+            //declare Dictionary<string, INode> _nodes
+            strBuilder.AppendLine($@"protected {dicNodeTypeName} _nodes = new {dicNodeTypeName}();");
+
+            //declare IEnumrable<IFlow> Flows
+            strBuilder.AppendLine($"public IEnumerable<{IFlowTypeName}> Flows => Array.Empty<{IFlowTypeName}>();");
 
             return strBuilder.ToString();
         }
 
         protected virtual string GenCodeGlobalVarInit()
         {
-            var propStrBuilder = new StringBuilder();
+            var strBuilder = new StringBuilder();
+
+            //initialize Variables
             foreach (var key in Variables.GetKeys())
             {
                 var value = Variables[key];
@@ -228,17 +219,25 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
                 string codeVal = CSharpHelper.ToCode(value);
                 string code = $"Variables[\"{key}\"] = {codeVal};";
 
-                propStrBuilder.AppendLine(code);
+                strBuilder.AppendLine(code);
+            }
+            strBuilder.AppendLine();
+
+            //initialize _nodes
+            foreach (var node in Nodes)
+            {
+
+                strBuilder.AppendLine($"_nodes[\"{node.ID}\"] =  m_{node.GetType().Name}_{node.ID};");
             }
 
-            return propStrBuilder.ToString();
+            return strBuilder.ToString();
         }
 
         protected virtual string GenCodeRun()
         {
             var strBuilder = new StringBuilder();
 
-            strBuilder.AppendLine($"var vars = new {typeof(GraphVariable).FullName} {{ Variables = Variables, Nodes = Nodes }};");
+            strBuilder.AppendLine($"var vars = new {typeof(GraphVariable).FullName} {{ Variables = Variables, Nodes = _nodes }};");
 
             var startNode = FindStartNode();
             var nodeVarName = $"m_{startNode.GetType().Name}_{startNode.ID}";
@@ -247,11 +246,11 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
             return strBuilder.ToString();
         }
 
-        protected virtual string GenCodeNodeDef(GraphVariable vars)
+        protected virtual string GenCodeNodeSourceCode(GraphVariable vars)
         {
             var strBuilder = new StringBuilder();
 
-            foreach (var node in Nodes)
+            foreach (var node in XmlNodes.ListItems)
             {
                 var code = node.ToCSharp(vars);
                 strBuilder.AppendLine(code);

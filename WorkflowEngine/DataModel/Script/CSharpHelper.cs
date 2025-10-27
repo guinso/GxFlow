@@ -3,6 +3,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
+using System.IO;
+using System.Runtime.Loader;
+using System.Text;
 using System.Text.Json;
 
 namespace GxFlow.WorkflowEngine.DataModel.Script
@@ -73,11 +76,17 @@ namespace GxFlow.WorkflowEngine.DataModel.Script
             return s_asmRef;
         }
 
-        public static (byte[], byte[]) CompileToDll(string sourceCode, string dllName = "MyAssembly.dll")
+        public static (byte[], byte[]) CompileToDll(string[] sourceCodes, string dllName = "MyAssembly.dll")
         {
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(
-                sourceCode, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest));
+            List<SyntaxTree> parsedSourceCode = new List<SyntaxTree>();
+            foreach (var code in sourceCodes)
+            {
+                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(
+                    code, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest));
 
+                parsedSourceCode.Add(syntaxTree);
+            }
+           
             var compileOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithOverflowChecks(true)
                 .WithOptimizationLevel(OptimizationLevel.Release)
@@ -87,7 +96,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Script
 
             CSharpCompilation compilation = CSharpCompilation.Create(
                 dllName,
-                [syntaxTree],
+                parsedSourceCode,
                 references,
                 compileOptions
             );
@@ -116,6 +125,60 @@ namespace GxFlow.WorkflowEngine.DataModel.Script
 
                     throw new Exception("failed to compile code");
                 }
+            }
+        }
+
+        public static string GenerateNamespace(string namespaceID, string content, string[]? additionalNamespaces = null)
+        {
+            var strBuilder = new StringBuilder();
+            if (additionalNamespaces != null)
+            {
+                foreach (var ns in additionalNamespaces)
+                {
+                    strBuilder.AppendLine($"using {ns};");
+                }
+            }
+            
+            string code = @$"
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            using System.Text;
+            using System.Threading;
+            using System.Threading.Tasks;
+            {strBuilder.ToString()}
+
+            namespace GxFlow.WorkflowEngine.Compiled_{namespaceID} {{
+                {content}
+            }}";
+
+            return code;
+        }
+
+        public static (AssemblyLoadContext, object) CompileAndLoadInstance(string[] sourceCode, string instanceType, AssemblyLoadContext? appDomain = null)
+        {
+            var (dll, pdb) = CompileToDll(sourceCode);
+
+            if (appDomain == null)
+            {
+                appDomain = new AssemblyLoadContext(Guid.NewGuid().ToString("N"), true);
+            }
+
+            using (var stream = new MemoryStream(dll))
+            {
+                var assembly = appDomain.LoadFromStream(stream);
+                if (assembly is null)
+                    throw new NullReferenceException("Cannot load assemly from source codes");
+
+                var type = assembly.GetType(instanceType);
+                if (type is null)
+                    throw new NullReferenceException($"instance type {instanceType} not found in source code");
+
+                var instance = Activator.CreateInstance(type);
+                if (instance is null)
+                    throw new NullReferenceException($"failed to instantiated object from type {instanceType}");
+
+                return (appDomain, instance);
             }
         }
     }

@@ -1,7 +1,6 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
 using GxFlow.WorkflowEngine.DataModel.Node;
 using GxFlow.WorkflowEngine.DataModel.Script;
-using System.Runtime.Loader;
 using System.Text;
 using System.Xml.Serialization;
 
@@ -11,19 +10,19 @@ namespace TestWorkflowEngine.DataModel.Core
     public class DiagramTest
     {
         [TestMethod]
-        public void TestXmlSerialization() 
+        public void TestXmlSerialization()
         {
             var expected = new Diagram();
-            expected.Nodes.Add(new StartNode { ID = "123" });
-            expected.Nodes.Add(new ScriptNode
+            expected.XmlNodes.ListItems.Add(new StartNode { ID = "123" });
+            expected.XmlNodes.ListItems.Add(new ScriptNode
             {
                 ID = "456",
                 Script = new GraphProperty<string> { Value = "int k = 7 + 6; Result = k;" },
             });
-            expected.Nodes.Add(new EndNode { ID = "789" });
+            expected.XmlNodes.ListItems.Add(new EndNode { ID = "789" });
 
-            expected.Flows.Add(new Flow { FromID = "123", ToID = "456" });
-            expected.Flows.Add(new Flow { FromID = "456", ToID = "789" });
+            expected.XmlFlows.ListItems.Add(new Flow { FromID = "123", ToID = "456" });
+            expected.XmlFlows.ListItems.Add(new Flow { FromID = "456", ToID = "789" });
 
             string rawXML = string.Empty;
 
@@ -38,8 +37,8 @@ namespace TestWorkflowEngine.DataModel.Core
             Diagram actual;
 
             var byteArr = Encoding.UTF8.GetBytes(rawXML);
-            using(var stream = new MemoryStream(byteArr))
-            using(var reader = new StreamReader(stream, Encoding.UTF8))
+            using (var stream = new MemoryStream(byteArr))
+            using (var reader = new StreamReader(stream, Encoding.UTF8))
             {
                 actual = serializer.Deserialize(reader) as Diagram;
             }
@@ -58,44 +57,31 @@ namespace TestWorkflowEngine.DataModel.Core
             diagram.Variables["b"] = "John";
             diagram.Variables["c"] = "return 3 + 4";
 
-            diagram.Nodes.Add(new StartNode{ ID = "123" });
-            diagram.Nodes.Add(new ScriptNode { 
+            diagram.XmlNodes.ListItems.Add(new StartNode { ID = "123" });
+            diagram.XmlNodes.ListItems.Add(new ScriptNode
+            {
                 ID = "456",
                 Script = new GraphProperty<string> { BindPath = "return (string)Vars[\"c\"];" }, //Value = "int k = 7 + 6; return k;" },
             });
-            diagram.Nodes.Add(new EndNode{ ID = "789" });
+            diagram.XmlNodes.ListItems.Add(new EndNode { ID = "789" });
 
-            diagram.Flows.Add(new Flow { FromID = "123", ToID = "456" });
-            diagram.Flows.Add(new Flow { FromID = "456", ToID = "789" });
+            diagram.XmlFlows.ListItems.Add(new Flow { FromID = "123", ToID = "456" });
+            diagram.XmlFlows.ListItems.Add(new Flow { FromID = "456", ToID = "789" });
 
             var vars = diagram.MakeVars();
 
             var code = diagram.ToCSharp(vars);
             Assert.IsNotNull(code);
 
-            var (asmRaw, _) = CSharpHelper.CompileToDll(code);
-            var appDomain = new AssemblyLoadContext("asdsda", true);
-            using (var stream = new MemoryStream(asmRaw))
-            {
-                var asm = appDomain.LoadFromStream(stream);
-                Assert.IsNotNull(asm);
+            var fullCode = CSharpHelper.GenerateNamespace(diagram.ID, code);
 
-                var type = asm.GetType($"GxFlow.WorkflowEngine.Compiled.Diagram_{diagram.ID}");
-                Assert.IsNotNull(type);
+            var (appDomain, obj) = CSharpHelper.CompileAndLoadInstance([fullCode], $"GxFlow.WorkflowEngine.Compiled_{diagram.ID}.Diagram_{diagram.ID}");
+            var instance = obj as IDiagram;
+            Assert.IsNotNull(instance);
 
-                var instance = Activator.CreateInstance(type) as IDiagram;
-                Assert.IsNotNull(instance);
+            instance.Run(new GraphVariable(), CancellationToken.None).Wait();
 
-                var task = instance.Run(new GraphVariable(), CancellationToken.None);
-                task.Wait();
-
-                //var methodInfo = type.GetMethod("Run");
-                //Assert.IsNotNull(methodInfo);
-
-                //var task = (Task)methodInfo.Invoke(instance, [CancellationToken.None]);
-                //Assert.IsNotNull(task);
-                //task.Wait();
-            }
+            appDomain.Unload();
         }
     }
 }

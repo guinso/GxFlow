@@ -101,6 +101,12 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
             ToID = toID;
         }
 
+        public Flow(INode fromNode, INode toNode)
+        {
+            FromID = fromNode.ID;
+            ToID = toNode.ID;
+        }
+
         public override void OnDeserialization(object? sender)
         {
             return;
