@@ -18,6 +18,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         
     }
 
+    [XmlRoot("workspace")]
     public abstract class WorkSpaceBase : IWorkSpaceExt
     {
         protected string _type = string.Empty;

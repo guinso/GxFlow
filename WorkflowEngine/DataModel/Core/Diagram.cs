@@ -22,6 +22,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         
     }
 
+    [XmlRoot("diagram")]
     [Serializable]
     public abstract class DiagramBase : IDiagramExt
     {

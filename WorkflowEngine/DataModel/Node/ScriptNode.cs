@@ -6,6 +6,7 @@ using System.Xml.Serialization;
 
 namespace GxFlow.WorkflowEngine.DataModel.Node
 {
+    [XmlRoot("node")]
     public class ScriptNode : NodeBase
     {
         public ScriptNode() { }
