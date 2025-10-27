@@ -154,6 +154,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         }
     }
 
+    [XmlRoot("workspace")]
     public class WorkSpace : WorkSpaceBase {
         public (AssemblyLoadContext, IWorkSpace) CompileCSharp(AssemblyLoadContext? appDomain = null)
         {

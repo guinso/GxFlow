@@ -5,6 +5,9 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text;
+using System.Xml.Serialization;
+using TestWorkflowEngine.DataModel.Core;
 
 namespace TestWorkflowEngine.DataModel.Node
 {
@@ -303,6 +306,65 @@ namespace TestWorkflowEngine.DataModel.Node
 
             var scriptStr2 = node2.ToCSharp(vars);
             Assert.IsNotNull(scriptStr2);
+        }
+
+        [TestMethod]
+        public void TestXmlSerialization()
+        {
+            string rawXML = string.Empty;
+
+            string expectedScript = "int k = 8; return k + 5;";
+            var obj = new ScriptNode(expectedScript);
+
+            var serializer = new XmlSerializer(typeof(ScriptNode));
+            using (var stream = new MemoryStream())
+            using (var writter = new StreamWriter(stream, Encoding.UTF8))
+            {
+                serializer.Serialize(writter, obj);
+                stream.Position = 0;
+
+                rawXML = Encoding.UTF8.GetString(stream.ToArray());
+            }
+
+            byte[] buffer = Encoding.UTF8.GetBytes(rawXML);
+            using (var stream = new MemoryStream(buffer))
+            using (var reader = new StreamReader(stream))
+            {
+                var actual = serializer.Deserialize(reader) as ScriptNode;
+                Assert.IsNotNull(actual);
+
+                Assert.AreEqual(expectedScript, actual.Script.Value);
+            }
+        }
+
+        [TestMethod]
+        public void TestXmlSerialization2()
+        {
+            string rawXML = string.Empty;
+
+            string expectedScript = "int k = 8; return k + 5;";
+            var obj = new ScriptNode(string.Empty);
+            obj.Script.BindPath = expectedScript;
+
+            var serializer = new XmlSerializer(typeof(ScriptNode));
+            using (var stream = new MemoryStream())
+            using (var writter = new StreamWriter(stream, Encoding.UTF8))
+            {
+                serializer.Serialize(writter, obj);
+                stream.Position = 0;
+
+                rawXML = Encoding.UTF8.GetString(stream.ToArray());
+            }
+
+            byte[] buffer = Encoding.UTF8.GetBytes(rawXML);
+            using (var stream = new MemoryStream(buffer))
+            using (var reader = new StreamReader(stream))
+            {
+                var actual = serializer.Deserialize(reader) as ScriptNode;
+                Assert.IsNotNull(actual);
+
+                Assert.AreEqual(expectedScript, actual.Script.BindPath);
+            }
         }
     }
 }

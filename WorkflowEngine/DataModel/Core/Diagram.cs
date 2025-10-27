@@ -27,13 +27,28 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
     {
         protected SerializableDictionary<string, object> _variables = new SerializableDictionary<string, object>();
 
+        protected string _type = string.Empty;
         protected Task _task = Task.CompletedTask;
 
         [XmlAttribute("id")]
         public string ID { get; set; } = Guid.NewGuid().ToString("N");
 
         [XmlAttribute("type")]
-        public string TypeName  => GetType().Name;
+        public string TypeName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_type))
+                    _type = GetType().FullName;
+
+                return _type;
+            }
+
+            set
+            {
+                _type = value;
+            }
+        }
 
         [XmlAttribute("name")]
         public string DisplayName { get; set; } = string.Empty;
@@ -260,6 +275,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         }
     }
 
+    [XmlRoot("diagram")]
     [Serializable]
     public class Diagram : DiagramBase
     {
