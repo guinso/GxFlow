@@ -1,7 +1,11 @@
-﻿namespace GxFlow.WorkflowEngine.DataModel.Core
+﻿using GxFlow.WorkflowEngine.DataModel.Trail;
+
+namespace GxFlow.WorkflowEngine.DataModel.Core
 {
     public class GraphVariable
     {
+        public IGraphTracker GraphTracker { get; set; } = new GraphTracker();
+
         public SerializableDictionary<string, object> Variables { get; set; } = new SerializableDictionary<string, object>();
 
         public Dictionary<string, INode> Nodes { get; set; } = new Dictionary<string, INode>();
@@ -30,6 +34,14 @@
 
     public class GraphVariableWrapper
     {
-        public GraphVariable Vars { get; set; } = new GraphVariable();
+        public GraphVariableWrapper(GraphTrack runInfo, GraphVariable vars)
+        {
+            Vars = vars;
+            RunInfo = runInfo;
+        }
+
+        public GraphVariable Vars { get; set; }
+
+        public GraphTrack RunInfo { get; set; }
     }
 }

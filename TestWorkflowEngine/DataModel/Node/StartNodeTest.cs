@@ -1,6 +1,7 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
 using GxFlow.WorkflowEngine.DataModel.Node;
-using GxFlow.WorkflowEngine.DataModel.Script;
+using GxFlow.WorkflowEngine.DataModel.Trail;
+using GxFlow.WorkflowEngine.Script;
 
 namespace TestWorkflowEngine.DataModel.Node
 {
@@ -24,7 +25,7 @@ namespace TestWorkflowEngine.DataModel.Node
                 }
             };
 
-            node.Run(vars, CancellationToken.None).Wait();
+            node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None).Wait();
         }
 
         [TestMethod]
@@ -41,7 +42,7 @@ namespace TestWorkflowEngine.DataModel.Node
             };
 
             Assert.ThrowsException<AggregateException>(() => {
-                node.Run(vars, CancellationToken.None).Wait();
+                node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None).Wait();
             });
         }
 
@@ -86,7 +87,7 @@ namespace TestWorkflowEngine.DataModel.Node
             var instance = obj as INode;
             Assert.IsNotNull(instance);
 
-            instance.Run(vars, CancellationToken.None).Wait();
+            instance.Run(new GraphTrack(string.Empty, string.Empty, instance.ID), vars, CancellationToken.None).Wait();
         }
     }
 }

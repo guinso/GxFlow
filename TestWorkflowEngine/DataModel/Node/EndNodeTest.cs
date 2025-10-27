@@ -1,6 +1,7 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
 using GxFlow.WorkflowEngine.DataModel.Node;
-using GxFlow.WorkflowEngine.DataModel.Script;
+using GxFlow.WorkflowEngine.DataModel.Trail;
+using GxFlow.WorkflowEngine.Script;
 
 namespace TestWorkflowEngine.DataModel.Node
 {
@@ -13,6 +14,8 @@ namespace TestWorkflowEngine.DataModel.Node
             var startNode = new StartNode();
             var endNode = new EndNode();
 
+            var runInfo = new GraphTrack(string.Empty, string.Empty, endNode.ID);
+
             var vars = new GraphVariable
             {
                 Nodes = new Dictionary<string, INode> {
@@ -23,7 +26,7 @@ namespace TestWorkflowEngine.DataModel.Node
                 }
             };
 
-            endNode.Run(vars, CancellationToken.None).Wait();
+            endNode.Run(runInfo, vars, CancellationToken.None).Wait();
         }
 
         [TestMethod]
@@ -56,6 +59,8 @@ namespace TestWorkflowEngine.DataModel.Node
                 }
             };
 
+            var runInfo = new GraphTrack(string.Empty, string.Empty, endNode.ID);
+
             var code = endNode.ToCSharp(vars);
             var fullCode = CSharpHelper.GenerateNamespace(endNode.ID, code);
             var (asm, obj) = CSharpHelper.CompileAndLoadInstance(
@@ -67,7 +72,7 @@ namespace TestWorkflowEngine.DataModel.Node
             var instance = obj as INode;
             Assert.IsNotNull(instance);
 
-            instance.Run(vars, CancellationToken.None).Wait();
+            instance.Run(runInfo, vars, CancellationToken.None).Wait();
         }
     }
 }

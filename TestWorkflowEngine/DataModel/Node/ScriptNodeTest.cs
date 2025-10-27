@@ -1,11 +1,13 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
 using GxFlow.WorkflowEngine.DataModel.Node;
+using GxFlow.WorkflowEngine.DataModel.Trail;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using System.Xml.Linq;
 using System.Xml.Serialization;
 using TestWorkflowEngine.DataModel.Core;
 
@@ -34,12 +36,12 @@ namespace TestWorkflowEngine.DataModel.Node
             vars.Flows.Add(new Flow { FromID = "123", ToID = "456" });
 
             
-            await node.Run(vars, CancellationToken.None);
+            await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             int ret = (int)node.Result;
             Assert.AreEqual(5, ret);
 
             node.Script.Value = "return (int)Vars[\"abc\"] + 3;";
-            await node.Run(vars, CancellationToken.None);
+            await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             ret = (int)node.Result;
             Assert.AreEqual(7, ret);
         }
@@ -65,11 +67,11 @@ namespace TestWorkflowEngine.DataModel.Node
             vars.Nodes[endNode.ID] = endNode;
 
             node.Script.BindPath = "return (string)Vars[\"efg\"];";
-            await node.Run(vars, CancellationToken.None);
+            await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             Assert.AreEqual("hello world", node.Result);
 
             node.Script.BindPath = "return (string)Vars[\"ss\"];";
-            await node.Run(vars, CancellationToken.None);
+            await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             Assert.AreEqual(75, node.Result);
         }
 
@@ -94,7 +96,7 @@ namespace TestWorkflowEngine.DataModel.Node
             vars.Nodes["1"] = node;
             vars.Nodes["2"] = new EndNode { ID = "2" };
 
-            await node.Run(vars, CancellationToken.None);
+            await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             Assert.AreEqual(75, node.Result);
             Assert.AreEqual(13, (int)variables["abc"]);
         }
@@ -152,7 +154,7 @@ namespace TestWorkflowEngine.DataModel.Node
             vars.Flows.Add(new Flow { FromID = "3", ToID = "4" });
             vars.Flows.Add(new Flow { FromID = "4", ToID = "5" });
 
-            await node1.Run(vars, CancellationToken.None);
+            await node1.Run(new GraphTrack(string.Empty, string.Empty, node1.ID), vars, CancellationToken.None);
 
             Assert.AreEqual(75, variables["a1"]);
         }

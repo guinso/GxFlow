@@ -1,11 +1,12 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Script;
+﻿using GxFlow.WorkflowEngine.DataModel.Trail;
+using GxFlow.WorkflowEngine.Script;
 using System.Reflection;
 using System.Text;
 using System.Xml.Serialization;
 
 namespace GxFlow.WorkflowEngine.DataModel.Core
 {
-    public interface INode : IGraphObj, IGraphRunnable
+    public interface INode : IGraphObj, IGraphRunnableTracker
     {
         public IEnumerable<PropertyInfo> Inputs { get; }
 
@@ -50,24 +51,24 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         public string Note { get; set; } = string.Empty;
 
         #region runnable
-        public virtual async Task Run(GraphVariable vars, CancellationToken token)
+        public virtual async Task Run(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             _task = Task.Run(async () => {
-                await RunInit(vars, token);
+                await RunInit(runInfo, vars, token);
 
-                await AssignInputs(vars, token);
+                await AssignInputs(runInfo, vars, token);
 
-                await RunContext(vars, token);
+                await RunContext(runInfo, vars, token);
 
-                await RunCleanUp(vars, token);
+                await RunCleanUp(runInfo, vars, token);
 
-                await RunOutgoing(vars, token);
+                await RunOutgoing(runInfo, vars, token);
             });
 
             await _task;
         }
 
-        protected virtual async Task AssignInputs(GraphVariable vars, CancellationToken token)
+        protected virtual async Task AssignInputs(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             var ins = Inputs;
             foreach (var inputItem in ins)
@@ -75,26 +76,30 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
                 var val = inputItem.GetValue(this) as IGraphProperty;
                 if (val != null)
                 {
-                    await val.EvalValue(vars, token);
+                    await val.EvalValue(runInfo, vars, token);
                 }
             }
         }
 
-        protected abstract Task RunInit(GraphVariable vars, CancellationToken token);
+        protected abstract Task RunInit(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
 
-        protected abstract Task RunCleanUp(GraphVariable vars, CancellationToken token);
+        protected abstract Task RunCleanUp(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
 
-        protected abstract Task RunContext(GraphVariable vars, CancellationToken token);
+        protected abstract Task RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
 
         public Task GetTaskStatus()
         {
             return _task;
         }
 
-        protected virtual async Task RunOutgoing(GraphVariable vars, CancellationToken token)
+        protected virtual async Task RunOutgoing(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             var node = FindNextSingleNode(vars);
-            await node.Run(vars, token);
+
+            var track = new GraphTrack(runInfo.DiagramID, ID, node.ID);
+            vars.GraphTracker.RegisterTrack(track);
+
+            await node.Run(track, vars, token);
         }
 
         protected virtual INode FindNextSingleNode(GraphVariable vars)
@@ -148,10 +153,9 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         #region code generation
         public virtual string ToCSharp(GraphVariable vars)
         {
-            //string taskTypeName = typeof(Task).FullName;
             string propertyInfoTypeName = typeof(PropertyInfo).FullName;
-            //string ienumerableTypeName = "System.Collections.Generic.IEnumerable";
-            //string listTypeName = "System.Collections.Generic.List";
+            string GraphTrackTypeName = typeof(GraphTrack).FullName;
+            string varsTypeName = typeof(GraphVariable).FullName;
 
             return @$"
             public class {GetType().Name}_{ID} : {typeof(INode).FullName}
@@ -173,7 +177,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
                     {GenCodePropInfoInit()}
                 }}
 
-                public async Task Run({typeof(GraphVariable).FullName} Vars, CancellationToken token)
+                public async Task Run({GraphTrackTypeName} RunInfo, {varsTypeName} Vars, CancellationToken token)
                 {{
                     _task = Task.Run(async () => {{
                         //handle input
@@ -260,9 +264,6 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
                     if (string.IsNullOrEmpty(prop.BindPath))
                     {
-                        //string rawStr = JsonSerializer.Serialize(prop.GetValue());
-                        //strBuilder.AppendLine($" = System.Text.Json.JsonSerializer.Deserialize<{prop.ValueType.FullName}>({rawStr});");
-
                         string codeVal = CSharpHelper.ToCode(prop.GetValue());
                         strBuilder.AppendLine($" = {codeVal};");
                     }
@@ -304,8 +305,13 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         protected virtual string GenCodeHandleOutgoing(GraphVariable vars)
         {
             var node = FindNextSingleNode(vars);
+            string graphTrackTypeName = typeof(GraphTrack).FullName;
 
-            return $"await Vars.Nodes[\"{node.ID}\"].Run(Vars, token);";
+            return @$"
+                var track = new {graphTrackTypeName}(RunInfo.DiagramID, ID, ""{node.ID}"");
+                Vars.GraphTracker.RegisterTrack(track);
+
+                await Vars.Nodes[""{ node.ID}""].Run(track, Vars, token);";
         }
 
         protected abstract string GenCodeContext(GraphVariable vars);

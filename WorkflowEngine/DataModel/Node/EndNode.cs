@@ -1,4 +1,5 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
+using GxFlow.WorkflowEngine.DataModel.Trail;
 using System.Xml.Serialization;
 
 namespace GxFlow.WorkflowEngine.DataModel.Node
@@ -11,22 +12,22 @@ namespace GxFlow.WorkflowEngine.DataModel.Node
             return "await Task.Delay(5);";
         }
 
-        protected override Task RunCleanUp(GraphVariable globalVariables, CancellationToken token)
+        protected override Task RunCleanUp(GraphTrack runInfo, GraphVariable globalVariables, CancellationToken token)
         {
             return Task.CompletedTask;
         }
 
-        protected override Task RunContext(GraphVariable globalVariables, CancellationToken token)
+        protected override Task RunContext(GraphTrack runInfo, GraphVariable globalVariables, CancellationToken token)
         {
             return Task.Delay(5);
         }
 
-        protected override Task RunInit(GraphVariable globalVariables, CancellationToken token)
+        protected override Task RunInit(GraphTrack runInfo, GraphVariable globalVariables, CancellationToken token)
         {
             return Task.CompletedTask;
         }
 
-        protected override Task RunOutgoing(GraphVariable vars, CancellationToken token)
+        protected override Task RunOutgoing(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             return Task.CompletedTask;
         }

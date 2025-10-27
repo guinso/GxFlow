@@ -1,5 +1,5 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Script;
-using GxFlow.WorkflowEngine.DataModel.Xml;
+﻿using GxFlow.WorkflowEngine.DataModel.Xml;
+using GxFlow.WorkflowEngine.Script;
 using System.Runtime.Loader;
 using System.Text;
 using System.Xml.Serialization;

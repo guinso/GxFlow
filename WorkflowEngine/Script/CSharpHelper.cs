@@ -1,4 +1,5 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
+using GxFlow.WorkflowEngine.DataModel.Trail;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
@@ -8,7 +9,7 @@ using System.Runtime.Loader;
 using System.Text;
 using System.Text.Json;
 
-namespace GxFlow.WorkflowEngine.DataModel.Script
+namespace GxFlow.WorkflowEngine.Script
 {
     public class CSharpHelper
     {
@@ -20,7 +21,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Script
             "System.Text",
             "System.Threading.Tasks"];
 
-        public static async Task<T> Eval<T>(string script, GraphVariable vars, CancellationToken token)
+        public static async Task<T> Eval<T>(string script, GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             var opt = ScriptOptions.Default
                 .AddImports(s_standardNamespaces);
@@ -31,7 +32,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Script
             var ret = await CSharpScript.RunAsync<T>(
                 script,
                 opt,
-                new GraphVariableWrapper { Vars = vars },
+                new GraphVariableWrapper(runInfo, vars),
                 typeof(GraphVariableWrapper),
                 token);
 

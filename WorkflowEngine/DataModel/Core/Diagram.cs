@@ -1,6 +1,7 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Node;
-using GxFlow.WorkflowEngine.DataModel.Script;
+using GxFlow.WorkflowEngine.DataModel.Trail;
 using GxFlow.WorkflowEngine.DataModel.Xml;
+using GxFlow.WorkflowEngine.Script;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Xml;
@@ -90,7 +91,10 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
                 var globalVars = MakeVars();
 
-                await startNode.Run(globalVars, token);
+                var track = new GraphTrack(ID, string.Empty, startNode.ID);
+                globalVars.GraphTracker.RegisterTrack(track);
+
+                await startNode.Run(track, globalVars, token);
             });
 
             await _task;
@@ -257,7 +261,11 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
             var startNode = FindStartNode();
             var nodeVarName = $"m_{startNode.GetType().Name}_{startNode.ID}";
-            strBuilder.AppendLine($"await {nodeVarName}.Run(vars, token);");
+
+            strBuilder.AppendLine($"var track = new {typeof(GraphTrack).FullName}(ID, string.Empty, {nodeVarName}.ID);");
+            strBuilder.AppendLine($"vars.GraphTracker.RegisterTrack(track);");
+
+            strBuilder.AppendLine($"await {nodeVarName}.Run(track, vars, token);");
 
             return strBuilder.ToString();
         }

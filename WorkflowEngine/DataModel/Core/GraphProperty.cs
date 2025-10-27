@@ -1,5 +1,6 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
-using GxFlow.WorkflowEngine.DataModel.Script;
+using GxFlow.WorkflowEngine.DataModel.Trail;
+using GxFlow.WorkflowEngine.Script;
 using System.Xml.Serialization;
 
 namespace GxFlow.WorkflowEngine.DataModel.Core
@@ -7,7 +8,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
     public interface IGraphProperty
     {
         string BindPath { get; set; }
-        Task EvalValue(GraphVariable globalVar, CancellationToken token);
+        Task EvalValue(GraphTrack runInfo, GraphVariable globalVar, CancellationToken token);
 
         Type ValueType { get; }
 
@@ -34,7 +35,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
         public Type ValueType { get => typeof(T); }
 
-        public async Task EvalValue(GraphVariable vars, CancellationToken token)
+        public async Task EvalValue(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             if (string.IsNullOrEmpty(BindPath))
             {
@@ -42,7 +43,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
             }
             else
             {
-                Value = await CSharpHelper.Eval<T>(BindPath, vars, token);
+                Value = await CSharpHelper.Eval<T>(BindPath, runInfo, vars, token);
             }
         }
 

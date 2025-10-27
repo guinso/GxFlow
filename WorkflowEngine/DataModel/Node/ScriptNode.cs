@@ -1,5 +1,6 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
-using GxFlow.WorkflowEngine.DataModel.Script;
+using GxFlow.WorkflowEngine.DataModel.Trail;
+using GxFlow.WorkflowEngine.Script;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using System.Xml.Serialization;
@@ -24,20 +25,20 @@ namespace GxFlow.WorkflowEngine.DataModel.Node
         [GraphOutput("Output", Description = "general output from script")]
         public object Result { get; private set; } = new object();
 
-        protected override async Task RunContext(GraphVariable vars, CancellationToken token)
+        protected override async Task RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             var ret = await CSharpScript.RunAsync(Script.Value, ScriptOptions.Default,
-                new GraphVariableWrapper { Vars = vars }, typeof(GraphVariableWrapper), token);
+                new GraphVariableWrapper(runInfo, vars), typeof(GraphVariableWrapper), token);
 
             Result = ret.ReturnValue;
         }
 
-        protected override Task RunCleanUp(GraphVariable vars, CancellationToken token)
+        protected override Task RunCleanUp(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             return Task.CompletedTask;
         }
 
-        protected override Task RunInit(GraphVariable vars, CancellationToken token)
+        protected override Task RunInit(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             return Task.CompletedTask;
         }
@@ -53,7 +54,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Node
             }
             else
             {
-                return $"Result = {typeof(CSharpHelper).FullName}.Eval<{typeof(string).FullName}>(Script, Vars, token);";
+                return $"Result = {typeof(CSharpHelper).FullName}.Eval<{typeof(string).FullName}>(Script, RunInfo, Vars, token);";
             }
                 
         }

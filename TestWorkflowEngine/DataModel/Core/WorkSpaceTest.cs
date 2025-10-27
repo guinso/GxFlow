@@ -1,6 +1,6 @@
 ﻿using GxFlow.WorkflowEngine.DataModel.Core;
 using GxFlow.WorkflowEngine.DataModel.Node;
-using GxFlow.WorkflowEngine.DataModel.Script;
+using GxFlow.WorkflowEngine.Script;
 using System.Text;
 using System.Xml.Serialization;
 

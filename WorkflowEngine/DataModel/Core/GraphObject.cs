@@ -1,4 +1,6 @@
-﻿namespace GxFlow.WorkflowEngine.DataModel.Core
+﻿using GxFlow.WorkflowEngine.DataModel.Trail;
+
+namespace GxFlow.WorkflowEngine.DataModel.Core
 {
     public interface IGraphObj
     {
@@ -11,11 +13,14 @@
         string Note { get; set; }
     }
 
+    public interface IGraphRunnableTracker
+    {
+        Task Run(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
+    }
+
     public interface IGraphRunnable
     {
         Task Run(GraphVariable vars, CancellationToken token);
-
-        Task GetTaskStatus();
     }
 
     public interface IScriptTransformer
