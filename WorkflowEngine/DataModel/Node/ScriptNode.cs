@@ -54,7 +54,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Node
             }
             else
             {
-                return $"Result = {typeof(CSharpHelper).FullName}.Eval<{typeof(string).FullName}>(Script, RunInfo, Vars, token);";
+                return $"Result = {typeof(CSharpHelper).FullName}.Eval<{Result.GetType().FullName}>(Script, RunInfo, Vars, token);";
             }
                 
         }
