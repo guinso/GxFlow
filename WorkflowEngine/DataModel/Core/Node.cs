@@ -21,7 +21,6 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
     [XmlRoot("node")]
     public abstract class NodeBase : INodeExt
     {
-        protected Task _task = Task.CompletedTask;
         protected string _type = string.Empty;
 
         [XmlAttribute("id")]
@@ -53,19 +52,15 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         #region runnable
         public virtual async Task Run(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
-            _task = Task.Run(async () => {
-                await RunInit(runInfo, vars, token);
+            await RunInit(runInfo, vars, token);
 
-                await AssignInputs(runInfo, vars, token);
+            await AssignInputs(runInfo, vars, token);
 
-                await RunContext(runInfo, vars, token);
+            await RunContext(runInfo, vars, token);
 
-                await RunCleanUp(runInfo, vars, token);
+            await RunCleanUp(runInfo, vars, token);
 
-                await RunOutgoing(runInfo, vars, token);
-            });
-
-            await _task;
+            await RunOutgoing(runInfo, vars, token);
         }
 
         protected virtual async Task AssignInputs(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
@@ -86,11 +81,6 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         protected abstract Task RunCleanUp(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
 
         protected abstract Task RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
-
-        public Task GetTaskStatus()
-        {
-            return _task;
-        }
 
         protected virtual async Task RunOutgoing(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
@@ -160,7 +150,6 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
             return @$"
             public class {GetType().Name}_{ID} : {typeof(INode).FullName}
             {{
-                protected Task _task = Task.CompletedTask;
                 protected List<{propertyInfoTypeName}> _inputProps = new List<{propertyInfoTypeName}>();
                 protected List<{propertyInfoTypeName}> _outputProps = new List<{propertyInfoTypeName}>();
 
@@ -179,23 +168,14 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
                 public async Task Run({GraphTrackTypeName} RunInfo, {varsTypeName} Vars, CancellationToken token)
                 {{
-                    _task = Task.Run(async () => {{
-                        //handle input
-                        {GenCodeHandleInputAssignment(vars)}
+                    //handle input
+                    {GenCodeHandleInputAssignment(vars)}
 
-                        //handle process
-                        {GenCodeContext(vars)}
+                    //handle process
+                    {GenCodeContext(vars)}
 
-                        //handle call next node
-                        {GenCodeHandleOutgoing(vars)}
-                    }});
-
-                    await _task;                
-                }}
-
-                public Task GetTaskStatus()
-                {{
-                    return _task;
+                    //handle call next node
+                    {GenCodeHandleOutgoing(vars)}              
                 }}
 
                 public System.Action<{GetType().Name}_{ID}> OnBegin {{ get; set;}} = (obj) => {{}};

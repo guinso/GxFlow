@@ -3,6 +3,7 @@ using GxFlow.WorkflowEngine.DataModel.Trail;
 using GxFlow.WorkflowEngine.DataModel.Xml;
 using GxFlow.WorkflowEngine.Script;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
@@ -16,6 +17,14 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         IEnumerable<INode> Nodes { get; }
 
         IEnumerable<IFlow> Flows { get; }
+
+        DiagramRunStatus RunStatus { get; }
+    }
+
+    public enum DiagramRunStatus
+    {
+        STOP,
+        RUNNING
     }
 
     public interface IDiagramExt: IDiagram, IScriptTransformer
@@ -29,6 +38,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
     {
         protected SerializableDictionary<string, object> _variables = new SerializableDictionary<string, object>();
 
+        protected int _waitTaskMS = 5;
         protected string _type = string.Empty;
         protected Task _task = Task.CompletedTask;
 
@@ -77,6 +87,9 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         [XmlElement("variables")]
         public SerializableDictionary<string, object> Variables => _variables;
 
+        [XmlIgnore]
+        public DiagramRunStatus RunStatus { get; protected set; } = DiagramRunStatus.STOP;
+
         public void OnDeserialization(object? sender)
         {
             return;
@@ -85,19 +98,47 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
         #region Runnable
         public async Task Run(GraphVariable vars, CancellationToken token)
         {
-            _task = Task.Run(async () =>
+            if(RunStatus == DiagramRunStatus.RUNNING)
+            {
+                throw new InvalidOperationException($"cannot start run diagram({ID}), it is still running");
+            }
+
+            RunStatus = DiagramRunStatus.RUNNING;
+            //var logger = GetLogger();
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
+            try
             {
                 var startNode = FindStartNode();
 
                 var globalVars = MakeVars();
+                globalVars.EndRun = (id) => { RunStatus = DiagramRunStatus.STOP; };
 
                 var track = new GraphTrack(ID, string.Empty, startNode.ID);
                 globalVars.GraphTracker.RegisterTrack(track);
 
                 await startNode.Run(track, globalVars, token);
-            });
 
-            await _task;
+                while(!token.IsCancellationRequested && RunStatus == DiagramRunStatus.RUNNING)
+                {
+                    Task.Delay(_waitTaskMS).Wait();
+                }
+            }
+            catch //(Exception ex)
+            {
+                //logger.LogError(ex.Message);
+                //logger.LogInformation(ex.StackTrace);
+                throw new NotImplementedException("please handle diagram error exception");
+            }
+            finally
+            {
+                RunStatus = DiagramRunStatus.STOP;
+
+                sw.Stop();
+                Console.WriteLine($"Total diagram rum time: {sw.Elapsed.TotalMilliseconds}ms");
+            }
         }
 
         protected INode FindStartNode()
@@ -109,11 +150,6 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
                 throw new Exception("Diagram cannot run with multiple start nodes");
 
             return startNodes.First();
-        }
-
-        public Task GetTaskStatus()
-        {
-            return _task;
         }
 
         public GraphVariable MakeVars()
@@ -140,6 +176,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
             string diagramClasName = $"{GetType().Name}_{ID}";
 
             string inodeTypeName = typeof(INode).FullName;
+            string diagramStatusTypeName = typeof(DiagramRunStatus).FullName;
             string serializableTypeName = "GxFlow.WorkflowEngine.DataModel.Core.SerializableDictionary<string, object>";
             //string dicNodeTypeName = $"Dictionary<string, {inodeTypeName}>";
 
@@ -158,6 +195,8 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
                     public string Note {{ get; set; }} = string.Empty;
 
+                    public {diagramStatusTypeName} RunStatus {{ get; protected set; }} = {diagramStatusTypeName}.STOP;
+
                     public {serializableTypeName} Variables {{get; protected set; }} =  new {serializableTypeName}();
 
                     #region node variables
@@ -173,16 +212,36 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
                     public async Task Run({typeof(GraphVariable).FullName} Vars, CancellationToken token)
                     {{
-                        _task = Task.Run(async () => {{
-                            {GenCodeRun()}
-                        }});
+                        if(RunStatus == {diagramStatusTypeName}.RUNNING)
+                        {{
+                            throw new InvalidOperationException($""cannot start run diagram({ID}), it is still running"");
+                        }}
 
-                        await _task;     
-                    }}
+                        RunStatus = {diagramStatusTypeName}.RUNNING;
+    
+                        var sw = new {typeof(Stopwatch).FullName}();
+                        sw.Start();
 
-                    public Task GetTaskStatus()
-                    {{
-                        return _task;
+                        try
+                        {{
+                            {GenCodeRun()}   
+
+                            while(!token.IsCancellationRequested && RunStatus == {diagramStatusTypeName}.RUNNING)
+                            {{
+                                Task.Delay({_waitTaskMS}).Wait();
+                            }}
+                        }}
+                        catch //(Exception ex)
+                        {{
+                            throw new NotImplementedException(""please handle diagram error exception"");
+                        }}
+                        finally
+                        {{
+                            RunStatus = {diagramStatusTypeName}.STOP;
+
+                            sw.Stop();
+                            Console.WriteLine($""Total diagram rum time: {{sw.Elapsed.TotalMilliseconds}}ms"");
+                        }}
                     }}
                 }}
 
@@ -258,9 +317,11 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
             var strBuilder = new StringBuilder();
 
             strBuilder.AppendLine($"var vars = new {typeof(GraphVariable).FullName} {{ Variables = Variables, Nodes = _nodes }};");
+            strBuilder.AppendLine($"vars.EndRun = (id) => {{ RunStatus = {typeof(DiagramRunStatus).FullName}.STOP; }};");
 
             var startNode = FindStartNode();
             var nodeVarName = $"m_{startNode.GetType().Name}_{startNode.ID}";
+            
 
             strBuilder.AppendLine($"var track = new {typeof(GraphTrack).FullName}(ID, string.Empty, {nodeVarName}.ID);");
             strBuilder.AppendLine($"vars.GraphTracker.RegisterTrack(track);");

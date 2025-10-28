@@ -6,8 +6,17 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
     {
         public IGraphTracker GraphTracker { get; set; } = new GraphTracker();
 
+        #region variables
         public SerializableDictionary<string, object> Variables { get; set; } = new SerializableDictionary<string, object>();
 
+        public object this[string key]
+        {
+            get => Variables[key];
+            set => Variables[key] = value;
+        }
+        #endregion
+
+        #region flow handler
         public Dictionary<string, INode> Nodes { get; set; } = new Dictionary<string, INode>();
 
         public List<IFlow> Flows { get; set; } = new List<IFlow>();
@@ -25,11 +34,13 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
             return nextNodes;
         }
 
-        public object this[string key]
+        public bool HasNode(string nodeID)
         {
-            get => Variables[key];
-            set => Variables[key] = value;
+            return Nodes.ContainsKey(nodeID);
         }
+
+        public Action<string> EndRun { get; set; } = (nodeID) => { };
+        #endregion
     }
 
     public class GraphVariableWrapper
