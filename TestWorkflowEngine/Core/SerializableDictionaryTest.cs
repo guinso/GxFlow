@@ -1,8 +1,8 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Core;
+﻿using GxFlow.WorkflowEngine.Core;
 using System.Text;
 using System.Xml.Serialization;
 
-namespace TestWorkflowEngine.DataModel.Core
+namespace TestWorkflowEngine.Core
 {
     [XmlRoot]
     public class MockDictionaryWrapper

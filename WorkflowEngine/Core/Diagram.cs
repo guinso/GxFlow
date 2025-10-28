@@ -1,14 +1,14 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Node;
-using GxFlow.WorkflowEngine.DataModel.Trail;
-using GxFlow.WorkflowEngine.DataModel.Xml;
+﻿using GxFlow.WorkflowEngine.Node;
 using GxFlow.WorkflowEngine.Script;
+using GxFlow.WorkflowEngine.Trail;
+using GxFlow.WorkflowEngine.Xml;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Core
+namespace GxFlow.WorkflowEngine.Core
 {
     public interface IDiagram: IGraphObj, IGraphRunnable
     {
@@ -177,8 +177,7 @@ namespace GxFlow.WorkflowEngine.DataModel.Core
 
             string inodeTypeName = typeof(INode).FullName;
             string diagramStatusTypeName = typeof(DiagramRunStatus).FullName;
-            string serializableTypeName = "GxFlow.WorkflowEngine.DataModel.Core.SerializableDictionary<string, object>";
-            //string dicNodeTypeName = $"Dictionary<string, {inodeTypeName}>";
+            string serializableTypeName = "GxFlow.WorkflowEngine.Core.SerializableDictionary<string, object>";
 
             vars = MakeVars();
 

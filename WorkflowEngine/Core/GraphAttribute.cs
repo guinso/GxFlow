@@ -1,4 +1,4 @@
-﻿namespace GxFlow.WorkflowEngine.DataModel.Core
+﻿namespace GxFlow.WorkflowEngine.Core
 {
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class GraphInputAttribute : Attribute

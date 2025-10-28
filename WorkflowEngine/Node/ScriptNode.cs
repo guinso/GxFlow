@@ -1,11 +1,11 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Core;
-using GxFlow.WorkflowEngine.DataModel.Trail;
+﻿using GxFlow.WorkflowEngine.Core;
 using GxFlow.WorkflowEngine.Script;
+using GxFlow.WorkflowEngine.Trail;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Node
+namespace GxFlow.WorkflowEngine.Node
 {
     [XmlRoot("node")]
     public class ScriptNode : NodeBase

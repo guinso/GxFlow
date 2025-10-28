@@ -1,10 +1,10 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Xml;
-using GxFlow.WorkflowEngine.Script;
+﻿using GxFlow.WorkflowEngine.Script;
+using GxFlow.WorkflowEngine.Xml;
 using System.Runtime.Loader;
 using System.Text;
 using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Core
+namespace GxFlow.WorkflowEngine.Core
 {
     public interface IWorkSpace: IGraphObj
     {

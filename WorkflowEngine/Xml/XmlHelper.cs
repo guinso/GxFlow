@@ -2,7 +2,7 @@
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Xml
+namespace GxFlow.WorkflowEngine.Xml
 {
     internal class XmlHelper
     {

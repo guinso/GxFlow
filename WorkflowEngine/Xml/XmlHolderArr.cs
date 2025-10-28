@@ -1,8 +1,8 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Core;
+﻿using GxFlow.WorkflowEngine.Core;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Xml
+namespace GxFlow.WorkflowEngine.Xml
 {
     public class XmlHolderArr<T> where T : class, IGraphObj
     {

@@ -1,10 +1,10 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Trail;
-using GxFlow.WorkflowEngine.Script;
+﻿using GxFlow.WorkflowEngine.Script;
+using GxFlow.WorkflowEngine.Trail;
 using System.Reflection;
 using System.Text;
 using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Core
+namespace GxFlow.WorkflowEngine.Core
 {
     public interface INode : IGraphObj, IGraphRunnableTracker
     {

@@ -1,9 +1,9 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Core;
-using GxFlow.WorkflowEngine.DataModel.Node;
-using GxFlow.WorkflowEngine.DataModel.Trail;
+﻿using GxFlow.WorkflowEngine.Core;
+using GxFlow.WorkflowEngine.Node;
 using GxFlow.WorkflowEngine.Script;
+using GxFlow.WorkflowEngine.Trail;
 
-namespace TestWorkflowEngine.DataModel.Node
+namespace TestWorkflowEngine.Node
 {
     [TestClass]
     public class EndNodeTest

@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Core
+namespace GxFlow.WorkflowEngine.Core
 {
     public class SerializableDictionary<K, V> where K : notnull
     {

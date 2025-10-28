@@ -1,4 +1,4 @@
-﻿namespace GxFlow.WorkflowEngine.DataModel.Trail
+﻿namespace GxFlow.WorkflowEngine.Trail
 {
     public class GraphTrack
     {

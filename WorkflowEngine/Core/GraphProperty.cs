@@ -1,9 +1,8 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Core;
-using GxFlow.WorkflowEngine.DataModel.Trail;
-using GxFlow.WorkflowEngine.Script;
+﻿using GxFlow.WorkflowEngine.Script;
+using GxFlow.WorkflowEngine.Trail;
 using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Core
+namespace GxFlow.WorkflowEngine.Core
 {
     public interface IGraphProperty
     {

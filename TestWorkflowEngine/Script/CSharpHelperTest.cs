@@ -1,8 +1,10 @@
-﻿using GxFlow.WorkflowEngine.Script;
+﻿using GxFlow.WorkflowEngine.Core;
+using GxFlow.WorkflowEngine.Script;
+using GxFlow.WorkflowEngine.Trail;
 using System.Drawing;
 using System.Runtime.Loader;
 
-namespace TestWorkflowEngine.DataModel.Script
+namespace TestWorkflowEngine.Script
 {
     [TestClass]
     public class CSharpHelperTest
@@ -65,8 +67,8 @@ namespace TestWorkflowEngine.DataModel.Script
             string kk = CSharpHelper.ToCode(pointExpected);
             Point pointActual = await CSharpHelper.Eval<Point>(
                 $"return {kk};", 
-                new GxFlow.WorkflowEngine.DataModel.Trail.GraphTrack(string.Empty, string.Empty, string.Empty),
-                new GxFlow.WorkflowEngine.DataModel.Core.GraphVariable(), 
+                new GraphTrack(string.Empty, string.Empty, string.Empty),
+                new GraphVariable(), 
                 CancellationToken.None);
             Assert.AreEqual(pointExpected, pointActual);
         }

@@ -1,17 +1,15 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Core;
-using GxFlow.WorkflowEngine.DataModel.Node;
-using GxFlow.WorkflowEngine.DataModel.Trail;
+﻿using GxFlow.WorkflowEngine.Core;
+using GxFlow.WorkflowEngine.Node;
+using GxFlow.WorkflowEngine.Trail;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
-using System.Xml.Linq;
 using System.Xml.Serialization;
-using TestWorkflowEngine.DataModel.Core;
 
-namespace TestWorkflowEngine.DataModel.Node
+namespace TestWorkflowEngine.Node
 {
     [TestClass]
     public sealed class ScriptNodeTest

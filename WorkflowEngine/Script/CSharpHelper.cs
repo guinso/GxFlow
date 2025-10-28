@@ -1,5 +1,5 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Core;
-using GxFlow.WorkflowEngine.DataModel.Trail;
+﻿using GxFlow.WorkflowEngine.Core;
+using GxFlow.WorkflowEngine.Trail;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;

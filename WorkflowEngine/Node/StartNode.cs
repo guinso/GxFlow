@@ -1,8 +1,8 @@
-using GxFlow.WorkflowEngine.DataModel.Core;
-using GxFlow.WorkflowEngine.DataModel.Trail;
+using GxFlow.WorkflowEngine.Core;
+using GxFlow.WorkflowEngine.Trail;
 using System.Xml.Serialization;
 
-namespace GxFlow.WorkflowEngine.DataModel.Node;
+namespace GxFlow.WorkflowEngine.Node;
 
 [XmlRoot("node")]
 public class StartNode : NodeBase

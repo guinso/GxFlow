@@ -1,6 +1,6 @@
-﻿using GxFlow.WorkflowEngine.DataModel.Trail;
+﻿using GxFlow.WorkflowEngine.Trail;
 
-namespace GxFlow.WorkflowEngine.DataModel.Core
+namespace GxFlow.WorkflowEngine.Core
 {
     public class GraphVariable
     {
