@@ -39,5 +39,10 @@ namespace GxFlow.WorkflowEngine.Node
         {
             return string.Empty;
         }
+
+        protected override string GenCodeExtra(GraphVariable vars)
+        {
+            return string.Empty;
+        }
     }
 }

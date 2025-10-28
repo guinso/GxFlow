@@ -178,7 +178,7 @@ namespace GxFlow.WorkflowEngine.Core
                     {GenCodeHandleOutgoing(vars)}              
                 }}
 
-                public System.Action<{GetType().Name}_{ID}> OnBegin {{ get; set;}} = (obj) => {{}};
+                {GenCodeExtra(vars)}
 
                 {GenCodeInputProp()}
 
@@ -210,6 +210,8 @@ namespace GxFlow.WorkflowEngine.Core
 
             return strBuilder.ToString();
         }
+
+        protected abstract string GenCodeExtra(GraphVariable vars);
 
         protected virtual string GenCodeHandleInputAssignment(GraphVariable vars)
         {
@@ -279,8 +281,6 @@ namespace GxFlow.WorkflowEngine.Core
 
             return strBuilder.ToString();
         }
-
-       
 
         protected virtual string GenCodeHandleOutgoing(GraphVariable vars)
         {

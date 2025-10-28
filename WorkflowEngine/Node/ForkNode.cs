@@ -37,6 +37,11 @@ namespace GxFlow.WorkflowEngine.Node
             return strBuilder.ToString();
         }
 
+        protected override string GenCodeExtra(GraphVariable vars)
+        {
+            return string.Empty;
+        }
+
         protected override Task RunCleanUp(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             return Task.CompletedTask;

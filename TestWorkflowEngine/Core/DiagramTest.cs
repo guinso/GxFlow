@@ -9,6 +9,28 @@ namespace TestWorkflowEngine.Core
     [TestClass]
     public class DiagramTest
     {
+        protected Diagram MakeDiagramInstance()
+        {
+            var diagram = new Diagram();
+
+            diagram.Variables["a"] = 7;
+            diagram.Variables["b"] = "John";
+            diagram.Variables["c"] = "return 3 + 4;";
+
+            diagram.XmlNodes.ListItems.Add(new StartNode { ID = "123" });
+            diagram.XmlNodes.ListItems.Add(new ScriptNode
+            {
+                ID = "456",
+                Script = new GraphProperty<string> { BindPath = "return (string)Vars[\"c\"];" }, // Value = "int k = 7 + 6; return k;" } //  
+            });
+            diagram.XmlNodes.ListItems.Add(new EndNode { ID = "789" });
+
+            diagram.XmlFlows.ListItems.Add(new Flow { FromID = "123", ToID = "456" });
+            diagram.XmlFlows.ListItems.Add(new Flow { FromID = "456", ToID = "789" });
+
+            return diagram;
+        }
+
         [TestMethod]
         public void TestXmlSerialization()
         {
@@ -51,22 +73,7 @@ namespace TestWorkflowEngine.Core
         [TestMethod]
         public void TestToCSharp()
         {
-            var diagram = new Diagram();
-
-            diagram.Variables["a"] = 7;
-            diagram.Variables["b"] = "John";
-            diagram.Variables["c"] = "return 3 + 4;";
-
-            diagram.XmlNodes.ListItems.Add(new StartNode { ID = "123" });
-            diagram.XmlNodes.ListItems.Add(new ScriptNode
-            {
-                ID = "456",
-                Script = new GraphProperty<string> { BindPath = "return (string)Vars[\"c\"];" }, // Value = "int k = 7 + 6; return k;" } // 
-            });
-            diagram.XmlNodes.ListItems.Add(new EndNode { ID = "789" });
-
-            diagram.XmlFlows.ListItems.Add(new Flow { FromID = "123", ToID = "456" });
-            diagram.XmlFlows.ListItems.Add(new Flow { FromID = "456", ToID = "789" });
+            var diagram = MakeDiagramInstance();
 
             var vars = diagram.MakeVars();
 
@@ -87,22 +94,7 @@ namespace TestWorkflowEngine.Core
         [TestMethod]
         public void TestRun()
         {
-            var diagram = new Diagram();
-
-            diagram.Variables["a"] = 7;
-            diagram.Variables["b"] = "John";
-            diagram.Variables["c"] = "return 3 + 4;";
-
-            diagram.XmlNodes.ListItems.Add(new StartNode { ID = "123" });
-            diagram.XmlNodes.ListItems.Add(new ScriptNode
-            {
-                ID = "456",
-                Script = new GraphProperty<string> { BindPath = "return (string)Vars[\"c\"];" }, //Value = "int k = 7 + 6; return k;" } //
-            });
-            diagram.XmlNodes.ListItems.Add(new EndNode { ID = "789" });
-
-            diagram.XmlFlows.ListItems.Add(new Flow { FromID = "123", ToID = "456" });
-            diagram.XmlFlows.ListItems.Add(new Flow { FromID = "456", ToID = "789" });
+            var diagram = MakeDiagramInstance();
 
             diagram.Run(new GraphVariable(), CancellationToken.None).Wait();
         }

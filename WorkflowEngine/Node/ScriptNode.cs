@@ -48,15 +48,26 @@ namespace GxFlow.WorkflowEngine.Node
         {
             if(string.IsNullOrEmpty(Script.BindPath))
             {
-                return @$"Result = new Func<object>(() => {{
-                    {Script.Value}
-                }})();";
+                return @$"Result = RunScript(RunInfo, Vars, token);";
             }
             else
             {
                 return $"Result = {typeof(CSharpHelper).FullName}.Eval<{Result.GetType().FullName}>(Script, RunInfo, Vars, token);";
             }
-                
+        }
+
+        protected override string GenCodeExtra(GraphVariable vars)
+        {
+            if (string.IsNullOrEmpty(Script.BindPath))
+            {
+                return $@"protected object RunScript({typeof(GraphTrack).FullName} RunInfo, {typeof(GraphVariable).FullName} Vars, CancellationToken token){{
+                    {Script.Value}
+                }}";
+            }
+            else
+            {
+                return string.Empty;
+            }
         }
         #endregion
     }

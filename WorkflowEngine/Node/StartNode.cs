@@ -12,6 +12,11 @@ public class StartNode : NodeBase
         return string.Empty;
     }
 
+    protected override string GenCodeExtra(GraphVariable vars)
+    {
+        return string.Empty;
+    }
+
     protected override Task RunCleanUp(GraphTrack runInfo, GraphVariable globalVariables, CancellationToken token)
     {
         return Task.CompletedTask;
