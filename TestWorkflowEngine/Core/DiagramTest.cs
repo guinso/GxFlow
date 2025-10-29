@@ -86,6 +86,7 @@ namespace TestWorkflowEngine.Core
             var instance = obj as IDiagram;
             Assert.IsNotNull(instance);
 
+            instance.Initialize(new GraphVariable(), CancellationToken.None).Wait();
             instance.Run(new GraphVariable(), CancellationToken.None).Wait();
 
             appDomain.Unload();
@@ -96,6 +97,7 @@ namespace TestWorkflowEngine.Core
         {
             var diagram = MakeDiagramInstance();
 
+            diagram.Initialize(new GraphVariable(), CancellationToken.None).Wait();
             diagram.Run(new GraphVariable(), CancellationToken.None).Wait();
         }
     }

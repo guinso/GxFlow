@@ -4,7 +4,8 @@
     {
         public GraphTrack() { }
 
-        public GraphTrack(string diagramID, string fromID, string toID) { 
+        public GraphTrack(string diagramID, string fromID, string toID)
+        {
             DiagramID = diagramID;
             FromID = fromID;
             ToID = toID;

@@ -7,27 +7,14 @@ namespace GxFlow.WorkflowEngine.Node
     [XmlRoot("node")]
     public class EndNode : NodeBase
     {
-        protected override string GenCodeContext(GraphVariable vars)
-        {
-            return "Vars.EndRun(ID);" 
-                + Environment.NewLine 
-                + "await Task.Delay(5);";
-        }
-
-        protected override Task RunCleanUp(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
+        public override Task Initialize(GraphVariable vars, CancellationToken token)
         {
             return Task.CompletedTask;
         }
 
-        protected override Task RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
+        protected override void RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
             vars.EndRun(ID);
-            return Task.Delay(5);
-        }
-
-        protected override Task RunInit(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
-        {
-            return Task.CompletedTask;
         }
 
         protected override Task RunOutgoing(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
@@ -35,14 +22,18 @@ namespace GxFlow.WorkflowEngine.Node
             return Task.CompletedTask;
         }
 
-        protected override string GenCodeHandleOutgoing(GraphVariable vars)
+        #region code generation
+
+
+        protected override string GenCodeAssignDynamicInputs(GraphVariable vars)
         {
             return string.Empty;
         }
 
-        protected override string GenCodeExtra(GraphVariable vars)
+        protected override string GenCodeRunOutgoing(GraphVariable vars)
         {
-            return string.Empty;
+            return "return Task.CompletedTask;";
         }
+        #endregion
     }
 }

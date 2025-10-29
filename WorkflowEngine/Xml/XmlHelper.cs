@@ -19,7 +19,7 @@ namespace GxFlow.WorkflowEngine.Xml
             using (var stream = new MemoryStream())
             using (var writer = new StreamWriter(stream, Encoding.UTF8))
             {
-                if(excludeNamespace)
+                if (excludeNamespace)
                     serializer.Serialize(writer, obj, ns);
                 else
                     serializer.Serialize(writer, obj);

@@ -37,7 +37,8 @@ namespace TestWorkflowEngine.Node
             var node = new EndNode();
             node.DisplayName = expectedName;
 
-            TestHelper.XmlSerialize(node, actual => {
+            TestHelper.XmlSerialize(node, actual =>
+            {
                 Assert.AreEqual(expectedName, actual.DisplayName);
             });
         }
@@ -50,11 +51,13 @@ namespace TestWorkflowEngine.Node
 
             var vars = new GraphVariable
             {
-                Nodes = new Dictionary<string, INode> {
+                Nodes = new Dictionary<string, INode>
+                {
                     //{ startNode.ID, startNode },
                     //{ endNode.ID, endNode }
                 },
-                Flows = new List<IFlow> {
+                Flows = new List<IFlow>
+                {
                     //new Flow(node, endNode)
                 }
             };

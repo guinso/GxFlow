@@ -6,16 +6,16 @@ using System.Xml.Serialization;
 
 namespace GxFlow.WorkflowEngine.Core
 {
-    public interface IWorkSpace: IGraphObj
+    public interface IWorkSpace : IGraphObj
     {
         Task Run(CancellationToken token);
 
         IEnumerable<IDiagram> Diagrams { get; }
     }
 
-    public interface IWorkSpaceExt: IWorkSpace, IScriptTransformer
+    public interface IWorkSpaceExt : IWorkSpace, IScriptTransformer
     {
-        
+
     }
 
     [XmlRoot("workspace")]
@@ -68,31 +68,29 @@ namespace GxFlow.WorkflowEngine.Core
 
             var vars = new GraphVariable();
 
+            await defaultDiagram.Initialize(vars, token);
+
             await defaultDiagram.Run(vars, token);
         }
 
         public string ToCSharp(GraphVariable vars)
         {
             string workspaceClasName = $"{GetType().Name}_{ID}";
-            string worksapceTypeName = typeof(IWorkSpace).FullName;
 
             string code = @$"
-            public class {workspaceClasName}: {worksapceTypeName} {{
-                    public string ID => ""{ID}"";
+            public class {workspaceClasName}: {GetType().Name} {{
+                public {workspaceClasName}() {{
+                    {GenCodeInitVariables(vars)}
 
-                    public string TypeName => ""{workspaceClasName}"";
+                    {GenCodeExtraConstructor(vars)}
+                }}
+                    
+                {GenCodeDeclareDiagrams()}
 
-                    public string DisplayName {{ get; set; }} = string.Empty;
-
-                    public string Note {{ get; set; }} = string.Empty;
-
-                    {GenCodeDeclareDiagrams()}
-
-                    {GenCodeRun()}
+                {GenCodeExtra(vars)}
             }}
 
-            {GenCodeDiagramSourceCode(vars)}
-            ";
+            {GenCodeDiagramSourceCode(vars)}";
 
             return code;
         }
@@ -101,49 +99,43 @@ namespace GxFlow.WorkflowEngine.Core
         {
             var strBuilder = new StringBuilder();
 
-            string diagramTypeName = typeof(IDiagram).FullName;
-
             foreach (var diagram in Diagrams)
             {
                 strBuilder.AppendLine($"protected Diagram_{diagram.ID} m_diagram_{diagram.ID} = new Diagram_{diagram.ID}();");
             }
 
-            strBuilder.AppendLine();
-            strBuilder.AppendLine($"public IEnumerable<{diagramTypeName}> Diagrams => [");
+            return strBuilder.ToString();
+        }
+
+        protected virtual string GenCodeInitVariables(GraphVariable vars)
+        {
+            var strBuilder = new StringBuilder();
+
+            strBuilder.AppendLine($"DefaultDiagramID = \"{DefaultDiagramID}\";");
 
             foreach (var diagram in Diagrams)
             {
-                strBuilder.AppendLine($"m_diagram_{diagram.ID},");
+                strBuilder.AppendLine($"XmlDiagrams.ListItems.Add(m_diagram_{diagram.ID});");
             }
-            strBuilder.AppendLine();
-            strBuilder.AppendLine("];");
 
             return strBuilder.ToString();
         }
 
-        protected string GenCodeRun()
+        protected virtual string GenCodeExtraConstructor(GraphVariable vars)
         {
-            var graphVariableTypeName = typeof(GraphVariable).FullName;
+            return string.Empty;
+        }
 
-            var defaultDiagram = Diagrams.First(x => x.ID == DefaultDiagramID);
-            if (defaultDiagram == null)
-            {
-                throw new NullReferenceException($"Default diagram {DefaultDiagramID} not found");
-            }
-
-            return $@"
-            public async Task Run(CancellationToken token) {{
-                var vars = new {graphVariableTypeName}();
-
-                await m_diagram_{DefaultDiagramID}.Run(vars, token);
-            }}";
+        protected virtual string GenCodeExtra(GraphVariable vars)
+        {
+            return string.Empty;
         }
 
         protected string GenCodeDiagramSourceCode(GraphVariable vars)
         {
             var strBuilder = new StringBuilder();
 
-            foreach(var diagram in XmlDiagrams.ListItems)
+            foreach (var diagram in XmlDiagrams.ListItems)
             {
                 var sourceCode = diagram.ToCSharp(vars);
 
@@ -156,7 +148,8 @@ namespace GxFlow.WorkflowEngine.Core
     }
 
     [XmlRoot("workspace")]
-    public class WorkSpace : WorkSpaceBase {
+    public class WorkSpace : WorkSpaceBase
+    {
         public (AssemblyLoadContext, IWorkSpace) CompileCSharp(AssemblyLoadContext? appDomain = null)
         {
             string sourceCode = ToCSharp(new GraphVariable());

@@ -4,10 +4,10 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using System.IO;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace GxFlow.WorkflowEngine.Script
 {
@@ -18,11 +18,22 @@ namespace GxFlow.WorkflowEngine.Script
             "System",
             "System.Linq",
             "System.Collections.Generic",
+            "System.Drawing",
             "System.Text",
-            "System.Threading.Tasks"];
+            "System.Threading.Tasks",
+            "GxFlow.WorkflowEngine.Core",
+            "GxFlow.WorkflowEngine.Node",
+            "GxFlow.WorkflowEngine.Trail"];
+
+        private static readonly string GENERIC_TYPE_NAME_PATTERN = "^(.+)`[0-9]+$";
 
         public static async Task<T> Eval<T>(string script, GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
+#if DEBUG
+            Console.WriteLine("Eval script:-");
+            Console.WriteLine(script);
+#endif
+
             var opt = ScriptOptions.Default
                 .AddImports(s_standardNamespaces);
 
@@ -41,26 +52,64 @@ namespace GxFlow.WorkflowEngine.Script
 
         public static string ToCode(object obj)
         {
-            if(obj is null)
-                throw new NullReferenceException(nameof(obj));
+            if (obj is null)
+                return "null";
 
             var type = obj.GetType();
 
             if (type == typeof(string))
+            {
+                obj = ((string)obj).Replace("\"", "\\\"");
                 return $"\"{obj}\"";
+            }
             else if (type == typeof(int))
                 return ((int)obj).ToString();
             else if (type == typeof(float))
                 return ((float)obj).ToString();
             else if (type == typeof(double))
                 return ((double)obj).ToString();
-            else if(type == typeof(bool))
+            else if (type == typeof(bool))
                 return ((bool)obj).ToString();
             else
             {
                 string jsonTxt = JsonSerializer.Serialize(obj).Replace("\"", "\\\"");
 
-                return $"{typeof(JsonSerializer).FullName}.Deserialize<{type.FullName}>(\"{jsonTxt}\")";
+                return $"{typeof(JsonSerializer).FullName}.Deserialize<{ToTypeName(type)}>(\"{jsonTxt}\")";
+            }
+        }
+
+        public static string ToTypeName(Type type)
+        {
+            if (type.IsGenericType)
+            {
+                var types = type.GetGenericArguments();
+
+                var strBuilder = new StringBuilder();
+
+                string genericTypeName = type.Name.Trim();
+                if (Regex.IsMatch(genericTypeName, GENERIC_TYPE_NAME_PATTERN))
+                {
+                    int index = type.Name.IndexOf('`');
+                    genericTypeName = genericTypeName.Substring(0, index);
+                }
+
+                strBuilder.Append(genericTypeName);
+                strBuilder.Append('<');
+                for (int i = 0; i < types.Length; i++)
+                {
+                    var t = types[i];
+                    strBuilder.Append(ToTypeName(t));
+
+                    if (i < types.Length - 1)
+                        strBuilder.Append(',');
+                }
+                strBuilder.Append('>');
+
+                return strBuilder.ToString();
+            }
+            else
+            {
+                return type.Name.Trim();
             }
         }
 
@@ -87,7 +136,7 @@ namespace GxFlow.WorkflowEngine.Script
 
                 parsedSourceCode.Add(syntaxTree);
             }
-           
+
             var compileOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithOverflowChecks(true)
                 .WithOptimizationLevel(OptimizationLevel.Release)
@@ -139,7 +188,7 @@ namespace GxFlow.WorkflowEngine.Script
                     strBuilder.AppendLine($"using {ns};");
                 }
             }
-            
+
             string code = @$"
             using System;
             using System.Collections.Generic;
@@ -147,6 +196,9 @@ namespace GxFlow.WorkflowEngine.Script
             using System.Text;
             using System.Threading;
             using System.Threading.Tasks;
+            using GxFlow.WorkflowEngine.Core;
+            using GxFlow.WorkflowEngine.Node;
+            using  GxFlow.WorkflowEngine.Trail;
             {strBuilder.ToString()}
 
             namespace GxFlow.WorkflowEngine.Compiled_{namespaceID} {{

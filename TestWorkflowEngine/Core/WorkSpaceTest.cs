@@ -95,7 +95,7 @@ namespace TestWorkflowEngine.Core
             var obj = MakeWorkSpaceInstance();
             int expectedNodeCount = obj.Diagrams.First().Nodes.Count();
 
-            
+
             string expectedScriptContent = "int k = 8; return k - 3;";
 
             var serializer = new XmlSerializer(typeof(WorkSpace));

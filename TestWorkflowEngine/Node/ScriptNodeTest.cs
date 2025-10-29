@@ -33,12 +33,13 @@ namespace TestWorkflowEngine.Node
 
             vars.Flows.Add(new Flow { FromID = "123", ToID = "456" });
 
-            
+            await node.Initialize(vars, CancellationToken.None);
             await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             int ret = (int)node.Result;
             Assert.AreEqual(5, ret);
 
             node.Script.Value = "return (int)Vars[\"abc\"] + 3;";
+            await node.Initialize(vars, CancellationToken.None);
             await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             ret = (int)node.Result;
             Assert.AreEqual(7, ret);
@@ -57,18 +58,21 @@ namespace TestWorkflowEngine.Node
 
             var endNode = new EndNode { ID = "2" };
 
-            var vars = new GraphVariable { 
+            var vars = new GraphVariable
+            {
                 Variables = variables,
-                Flows = [ new Flow(node.ID, endNode.ID)]
+                Flows = [new Flow(node.ID, endNode.ID)]
             };
             vars.Nodes[node.ID] = node;
             vars.Nodes[endNode.ID] = endNode;
 
             node.Script.BindPath = "return (string)Vars[\"efg\"];";
+            await node.Initialize(vars, CancellationToken.None);
             await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             Assert.AreEqual("hello world", node.Result);
 
             node.Script.BindPath = "return (string)Vars[\"ss\"];";
+            await node.Initialize(vars, CancellationToken.None);
             await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             Assert.AreEqual(75, node.Result);
         }
@@ -86,14 +90,16 @@ namespace TestWorkflowEngine.Node
             node.ID = "1";
 
             node.Script.BindPath = "return (string)Vars[\"script\"];";
-            
-            var vars = new GraphVariable { 
+
+            var vars = new GraphVariable
+            {
                 Variables = variables,
-                Flows = [ new Flow("1", "2") ]
+                Flows = [new Flow("1", "2")]
             };
             vars.Nodes["1"] = node;
             vars.Nodes["2"] = new EndNode { ID = "2" };
 
+            await node.Initialize(vars, CancellationToken.None);
             await node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None);
             Assert.AreEqual(75, node.Result);
             Assert.AreEqual(13, (int)variables["abc"]);
@@ -151,6 +157,11 @@ namespace TestWorkflowEngine.Node
             vars.Flows.Add(new Flow { FromID = "2", ToID = "3" });
             vars.Flows.Add(new Flow { FromID = "3", ToID = "4" });
             vars.Flows.Add(new Flow { FromID = "4", ToID = "5" });
+
+            await node1.Initialize(vars, CancellationToken.None);
+            await node2.Initialize(vars, CancellationToken.None);
+            await node3.Initialize(vars, CancellationToken.None);
+            await node4.Initialize(vars, CancellationToken.None);
 
             await node1.Run(new GraphTrack(string.Empty, string.Empty, node1.ID), vars, CancellationToken.None);
 
@@ -231,7 +242,7 @@ namespace TestWorkflowEngine.Node
             var compileOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithOverflowChecks(true)
                 .WithOptimizationLevel(OptimizationLevel.Release);
-                //.WithUsings(DefaultNamespaces);
+            //.WithUsings(DefaultNamespaces);
 
             CSharpCompilation compilation = CSharpCompilation.Create(
                 "MyAssembly.dll",
@@ -242,7 +253,7 @@ namespace TestWorkflowEngine.Node
             #endregion
 
             #region step 4: compile and run the assembly
-            using(var dllStream = new MemoryStream())
+            using (var dllStream = new MemoryStream())
             using (var pdbStream = new MemoryStream())
             {
                 var result = compilation.Emit(dllStream, pdbStream); //actual compilation process runs here
@@ -262,7 +273,7 @@ namespace TestWorkflowEngine.Node
                     var instance = Activator.CreateInstance(type);
                     var methodInfo = type.GetMethod("Run");
 
-                    if(methodInfo is null)
+                    if (methodInfo is null)
                         throw new NullReferenceException(nameof(methodInfo));
 
                     methodInfo.Invoke(instance, null);
@@ -286,12 +297,13 @@ namespace TestWorkflowEngine.Node
         [TestMethod]
         public void TestToCSharp()
         {
-            var node1 = new ScriptNode { Script = new GraphProperty<string>("return 3 + 4;") , ID="123" };
+            var node1 = new ScriptNode { Script = new GraphProperty<string>("return 3 + 4;"), ID = "123" };
             var node2 = new ScriptNode { Script = new GraphProperty<string> { BindPath = "return (string)Vars[\"b\"];" }, ID = "456" };
             var endNode = new EndNode { ID = "789" };
 
-            var vars = new GraphVariable { 
-                Flows = [ new Flow(node1.ID, node2.ID), new Flow(node2.ID, endNode.ID)]
+            var vars = new GraphVariable
+            {
+                Flows = [new Flow(node1.ID, node2.ID), new Flow(node2.ID, endNode.ID)]
             };
 
             vars["a"] = 58;

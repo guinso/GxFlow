@@ -26,7 +26,7 @@ namespace TestWorkflowEngine.Core
 
             var serializer = new XmlSerializer(typeof(MockDictionaryWrapper));
             using (var stream = new MemoryStream())
-            using(var writter = new StreamWriter(stream, Encoding.UTF8))
+            using (var writter = new StreamWriter(stream, Encoding.UTF8))
             {
                 serializer.Serialize(writter, vars);
                 stream.Position = 0;
@@ -35,7 +35,7 @@ namespace TestWorkflowEngine.Core
             }
 
             byte[] buffer = Encoding.UTF8.GetBytes(rawXML);
-            using(var stream = new MemoryStream(buffer))
+            using (var stream = new MemoryStream(buffer))
             using (var reader = new StreamReader(stream))
             {
                 var obj = serializer.Deserialize(reader) as MockDictionaryWrapper;

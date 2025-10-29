@@ -23,36 +23,31 @@ namespace GxFlow.WorkflowEngine.Node
 
         [XmlIgnore]
         [GraphOutput("Output", Description = "general output from script")]
-        public object Result { get; private set; } = new object();
+        public object Result { get; protected set; } = new object();
 
-        protected override async Task RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
+        protected override void RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
-            var ret = await CSharpScript.RunAsync(Script.Value, ScriptOptions.Default,
+            var task = CSharpScript.RunAsync(Script.Value, ScriptOptions.Default,
                 new GraphVariableWrapper(runInfo, vars), typeof(GraphVariableWrapper), token);
 
-            Result = ret.ReturnValue;
-        }
+            task.Wait();
 
-        protected override Task RunCleanUp(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
-        {
-            return Task.CompletedTask;
-        }
-
-        protected override Task RunInit(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
-        {
-            return Task.CompletedTask;
+            Result = task.Result.ReturnValue;
         }
 
         #region code generation
-        protected override string GenCodeContext(GraphVariable vars)
+        protected override string GenCodeRunContext(GraphVariable vars)
         {
-            if(string.IsNullOrEmpty(Script.BindPath))
+            if (string.IsNullOrEmpty(Script.BindPath))
             {
                 return @$"Result = RunScript(RunInfo, Vars, token);";
             }
             else
             {
-                return $"Result = {typeof(CSharpHelper).FullName}.Eval<{Result.GetType().FullName}>(Script, RunInfo, Vars, token);";
+                return $@"var task = {typeof(CSharpHelper).FullName}.Eval<{Result.GetType().FullName}>(Script.Value, RunInfo, Vars, token);
+                task.Wait();
+
+                Result = task.Result;";
             }
         }
 
@@ -60,7 +55,7 @@ namespace GxFlow.WorkflowEngine.Node
         {
             if (string.IsNullOrEmpty(Script.BindPath))
             {
-                return $@"protected object RunScript({typeof(GraphTrack).FullName} RunInfo, {typeof(GraphVariable).FullName} Vars, CancellationToken token){{
+                return $@"protected object RunScript(GraphTrack RunInfo, GraphVariable Vars, CancellationToken token){{
                     {Script.Value}
                 }}";
             }

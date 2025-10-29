@@ -20,11 +20,12 @@ namespace TestWorkflowEngine.Node
                     { node.ID, node },
                     { endNode.ID, endNode }
                 },
-                Flows = new List<IFlow> { 
+                Flows = new List<IFlow> {
                     new Flow(node, endNode)
                 }
             };
 
+            node.Initialize(vars, CancellationToken.None).Wait();
             node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None).Wait();
         }
 
@@ -32,7 +33,7 @@ namespace TestWorkflowEngine.Node
         public void TestRun2()
         {
             var node = new StartNode();
-            
+
             var vars = new GraphVariable
             {
                 Nodes = new Dictionary<string, INode> {
@@ -41,7 +42,9 @@ namespace TestWorkflowEngine.Node
                 Flows = new List<IFlow>()
             };
 
-            Assert.ThrowsException<AggregateException>(() => {
+            Assert.ThrowsException<Exception>(() =>
+            {
+                node.Initialize(vars, CancellationToken.None).Wait();
                 node.Run(new GraphTrack(string.Empty, string.Empty, node.ID), vars, CancellationToken.None).Wait();
             });
         }
@@ -54,7 +57,8 @@ namespace TestWorkflowEngine.Node
             var node = new StartNode();
             node.DisplayName = expectedName;
 
-            TestHelper.XmlSerialize(node, actual => { 
+            TestHelper.XmlSerialize(node, actual =>
+            {
                 Assert.AreEqual(expectedName, actual.DisplayName);
             });
         }
@@ -87,6 +91,7 @@ namespace TestWorkflowEngine.Node
             var instance = obj as INode;
             Assert.IsNotNull(instance);
 
+            instance.Initialize(vars, CancellationToken.None).Wait();
             instance.Run(new GraphTrack(string.Empty, string.Empty, instance.ID), vars, CancellationToken.None).Wait();
         }
     }

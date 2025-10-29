@@ -7,28 +7,25 @@ namespace GxFlow.WorkflowEngine.Node;
 [XmlRoot("node")]
 public class StartNode : NodeBase
 {
-    protected override string GenCodeContext(GraphVariable vars)
+    public override Task Run(GraphTrack RunInfo, GraphVariable Vars, CancellationToken token)
+    {
+        return RunOutgoing(RunInfo, Vars, token);
+    }
+
+    protected override void RunContext(GraphTrack runInfo, GraphVariable globalVariables, CancellationToken token)
+    {
+        return;
+    }
+
+    #region code generation
+    protected override string GenCodeAssignDynamicInputs(GraphVariable vars)
     {
         return string.Empty;
     }
 
-    protected override string GenCodeExtra(GraphVariable vars)
+    protected override string GenCodeRunContext(GraphVariable vars)
     {
         return string.Empty;
     }
-
-    protected override Task RunCleanUp(GraphTrack runInfo, GraphVariable globalVariables, CancellationToken token)
-    {
-        return Task.CompletedTask;
-    }
-
-    protected override Task RunContext(GraphTrack runInfo, GraphVariable globalVariables, CancellationToken token)
-    {
-        return Task.CompletedTask;
-    }
-
-    protected override Task RunInit(GraphTrack runInfo, GraphVariable globalVariables, CancellationToken token)
-    {
-        return Task.CompletedTask;
-    }
+    #endregion
 }

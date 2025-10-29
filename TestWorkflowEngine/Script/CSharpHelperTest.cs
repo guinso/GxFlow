@@ -66,9 +66,9 @@ namespace TestWorkflowEngine.Script
             Point pointExpected = new Point(3, 5);
             string kk = CSharpHelper.ToCode(pointExpected);
             Point pointActual = await CSharpHelper.Eval<Point>(
-                $"return {kk};", 
+                $"return {kk};",
                 new GraphTrack(string.Empty, string.Empty, string.Empty),
-                new GraphVariable(), 
+                new GraphVariable(),
                 CancellationToken.None);
             Assert.AreEqual(pointExpected, pointActual);
         }
@@ -79,7 +79,7 @@ namespace TestWorkflowEngine.Script
             var (asmRaw, pdbRaw) = CSharpHelper.CompileToDll([_sourceCode]);
 
             var appContext = new AssemblyLoadContext("exampleAsmContext", true);
-            using(var stream = new  MemoryStream(asmRaw))
+            using (var stream = new MemoryStream(asmRaw))
             {
                 var asm = appContext.LoadFromStream(stream);
 

@@ -10,7 +10,7 @@ using System.Xml.Serialization;
 
 namespace GxFlow.WorkflowEngine.Core
 {
-    public interface IDiagram: IGraphObj, IGraphRunnable
+    public interface IDiagram : IGraphObj, IGraphRunnable
     {
         SerializableDictionary<string, object> Variables { get; }
 
@@ -27,9 +27,9 @@ namespace GxFlow.WorkflowEngine.Core
         RUNNING
     }
 
-    public interface IDiagramExt: IDiagram, IScriptTransformer
+    public interface IDiagramExt : IDiagram, IScriptTransformer
     {
-        
+
     }
 
     [XmlRoot("diagram")]
@@ -38,9 +38,11 @@ namespace GxFlow.WorkflowEngine.Core
     {
         protected SerializableDictionary<string, object> _variables = new SerializableDictionary<string, object>();
 
-        protected int _waitTaskMS = 5;
+        protected const int WAIT_MS = 5;
         protected string _type = string.Empty;
         protected Task _task = Task.CompletedTask;
+        protected INode _startNode;
+        protected GraphVariable _vars = new GraphVariable();
 
         [XmlAttribute("id")]
         public string ID { get; set; } = Guid.NewGuid().ToString("N");
@@ -90,18 +92,36 @@ namespace GxFlow.WorkflowEngine.Core
         [XmlIgnore]
         public DiagramRunStatus RunStatus { get; protected set; } = DiagramRunStatus.STOP;
 
-        public void OnDeserialization(object? sender)
+        #region Runnable
+        public Task Initialize(GraphVariable vars, CancellationToken token)
         {
-            return;
+            _startNode = FindStartNode();
+
+            _vars = MakeVars();
+            _vars.EndRun = (id) => { RunStatus = DiagramRunStatus.STOP; };
+
+            var globalVars = MakeVars();
+
+            var tasks = new List<Task>();
+            foreach (var node in Nodes)
+            {
+                tasks.Add(node.Initialize(globalVars, token));
+            }
+
+            Task.WaitAll(tasks);
+
+            return Task.CompletedTask;
         }
 
-        #region Runnable
         public async Task Run(GraphVariable vars, CancellationToken token)
         {
-            if(RunStatus == DiagramRunStatus.RUNNING)
+            if (RunStatus == DiagramRunStatus.RUNNING)
             {
-                throw new InvalidOperationException($"cannot start run diagram({ID}), it is still running");
+                throw new InvalidOperationException($"cannot start to run diagram({ID}), it is still running");
             }
+
+            if (_startNode is null)
+                throw new NullReferenceException("Cannot start run diagram without start node");
 
             RunStatus = DiagramRunStatus.RUNNING;
             //var logger = GetLogger();
@@ -111,26 +131,25 @@ namespace GxFlow.WorkflowEngine.Core
 
             try
             {
-                var startNode = FindStartNode();
+                var track = new GraphTrack(ID, string.Empty, _startNode.ID);
+                _vars.GraphTracker.RegisterTrack(track);
 
-                var globalVars = MakeVars();
-                globalVars.EndRun = (id) => { RunStatus = DiagramRunStatus.STOP; };
+                await _startNode.Run(track, _vars, token);
 
-                var track = new GraphTrack(ID, string.Empty, startNode.ID);
-                globalVars.GraphTracker.RegisterTrack(track);
-
-                await startNode.Run(track, globalVars, token);
-
-                while(!token.IsCancellationRequested && RunStatus == DiagramRunStatus.RUNNING)
+                while (!token.IsCancellationRequested && RunStatus == DiagramRunStatus.RUNNING)
                 {
-                    Task.Delay(_waitTaskMS).Wait();
+                    Task.Delay(WAIT_MS).Wait();
                 }
             }
-            catch //(Exception ex)
+            catch (Exception ex)
             {
                 //logger.LogError(ex.Message);
                 //logger.LogInformation(ex.StackTrace);
-                throw new NotImplementedException("please handle diagram error exception");
+
+                Console.WriteLine(ex.ToString());
+                Console.WriteLine(ex.StackTrace);
+
+                throw;
             }
             finally
             {
@@ -160,7 +179,7 @@ namespace GxFlow.WorkflowEngine.Core
                 vars.Nodes[node.ID] = node;
             }
 
-            foreach(var flow in Flows)
+            foreach (var flow in Flows)
             {
                 vars.Flows.Add(flow);
             }
@@ -182,70 +201,37 @@ namespace GxFlow.WorkflowEngine.Core
             vars = MakeVars();
 
             string code = @$"
-                public class {diagramClasName}: {typeof(IDiagram).FullName} {{
+            public class {diagramClasName}: {GetType().Name} {{
+                #region node variables
+                {GenCodeNodeVariables()}
+                #endregion
 
-                    protected Task _task = Task.CompletedTask;
+                #region flow variables
+                {GenCodeFlowVariables()}
+                #endregion
 
-                    public string ID => ""{ID}"";
+                public {diagramClasName}()
+                {{
+                    ID = ""{ID}"";
+                    DisplayName = ""{DisplayName}"";
+                    Note = ""{Note}"";
 
-                    public string TypeName => ""{diagramClasName}"";
-
-                    public string DisplayName {{ get; set; }} = string.Empty;
-
-                    public string Note {{ get; set; }} = string.Empty;
-
-                    public {diagramStatusTypeName} RunStatus {{ get; protected set; }} = {diagramStatusTypeName}.STOP;
-
-                    public {serializableTypeName} Variables {{get; protected set; }} =  new {serializableTypeName}();
-
-                    #region node variables
-                    {GenCodeNodeVariables()}
+                    #region global variables
+                    {GenCodeInitVariables()}
                     #endregion
 
-                    public {diagramClasName}()
-                    {{
-                        #region global variables
-                        {GenCodeGlobalVarInit()}
-                        #endregion
-                    }}
-
-                    public async Task Run({typeof(GraphVariable).FullName} Vars, CancellationToken token)
-                    {{
-                        if(RunStatus == {diagramStatusTypeName}.RUNNING)
-                        {{
-                            throw new InvalidOperationException($""cannot start run diagram({ID}), it is still running"");
-                        }}
-
-                        RunStatus = {diagramStatusTypeName}.RUNNING;
-    
-                        var sw = new {typeof(Stopwatch).FullName}();
-                        sw.Start();
-
-                        try
-                        {{
-                            {GenCodeRun()}   
-
-                            while(!token.IsCancellationRequested && RunStatus == {diagramStatusTypeName}.RUNNING)
-                            {{
-                                Task.Delay({_waitTaskMS}).Wait();
-                            }}
-                        }}
-                        catch //(Exception ex)
-                        {{
-                            throw new NotImplementedException(""please handle diagram error exception"");
-                        }}
-                        finally
-                        {{
-                            RunStatus = {diagramStatusTypeName}.STOP;
-
-                            sw.Stop();
-                            Console.WriteLine($""Total diagram rum time: {{sw.Elapsed.TotalMilliseconds}}ms"");
-                        }}
-                    }}
+                    {GenCodeConstructorExtra(vars)}
                 }}
+
+                {GenCodeExtra(vars)}
+            }}
 
             #region node class definition
             {GenCodeNodeSourceCode(vars)}
+            #endregion
+
+            #region flow class definition
+            {GenCodeFlowSourceCode(vars)}
             #endregion";
 
             return code;
@@ -253,43 +239,38 @@ namespace GxFlow.WorkflowEngine.Core
 
         protected virtual string GenCodeNodeVariables()
         {
-            string INodeTypeName = typeof(INode).FullName;
-            string IFlowTypeName = typeof(IFlow).FullName;
-            string dicNodeTypeName = $"Dictionary<string, {INodeTypeName}>";
-
             var strBuilder = new StringBuilder();
 
             foreach (var node in Nodes)
             {
-                string className = $"{ node.GetType().Name }_{ node.ID}";
+                string className = $"{node.GetType().Name}_{node.ID}";
 
                 strBuilder.AppendLine($"protected {className} m_{className} = new {className}();");
             }
 
-            //declare IEnumrable<INode> Nodes
-            strBuilder.AppendLine($"public IEnumerable<{INodeTypeName}> Nodes => [");
-            foreach (var node in Nodes)
+            return strBuilder.ToString();
+        }
+
+        protected virtual string GenCodeFlowVariables()
+        {
+            var strBuilder = new StringBuilder();
+
+            foreach (var flow in Flows)
             {
-                strBuilder.AppendLine($"m_{node.GetType().Name}_{node.ID},");
-                
+                string className = $"{flow.GetType().Name}_{flow.ID}";
+
+                strBuilder.AppendLine($"protected {className} m_{className} = new {className}();");
             }
-            strBuilder.AppendLine("];");
-            strBuilder.AppendLine();
-
-            //declare Dictionary<string, INode> _nodes
-            strBuilder.AppendLine($@"protected {dicNodeTypeName} _nodes = new {dicNodeTypeName}();");
-
-            //declare IEnumrable<IFlow> Flows
-            strBuilder.AppendLine($"public IEnumerable<{IFlowTypeName}> Flows => Array.Empty<{IFlowTypeName}>();");
 
             return strBuilder.ToString();
         }
 
-        protected virtual string GenCodeGlobalVarInit()
+        protected virtual string GenCodeInitVariables()
         {
             var strBuilder = new StringBuilder();
 
             //initialize Variables
+            strBuilder.AppendLine("//variables");
             foreach (var key in Variables.GetKeys())
             {
                 var value = Variables[key];
@@ -301,31 +282,21 @@ namespace GxFlow.WorkflowEngine.Core
             }
             strBuilder.AppendLine();
 
-            //initialize _nodes
+            //initialize Nodes
+            strBuilder.AppendLine("//nodes");
             foreach (var node in Nodes)
             {
-
-                strBuilder.AppendLine($"_nodes[\"{node.ID}\"] =  m_{node.GetType().Name}_{node.ID};");
+                strBuilder.AppendLine($"XmlNodes.ListItems.Add(m_{node.GetType().Name}_{node.ID});");
             }
 
-            return strBuilder.ToString();
-        }
+            strBuilder.AppendLine();
 
-        protected virtual string GenCodeRun()
-        {
-            var strBuilder = new StringBuilder();
-
-            strBuilder.AppendLine($"var vars = new {typeof(GraphVariable).FullName} {{ Variables = Variables, Nodes = _nodes }};");
-            strBuilder.AppendLine($"vars.EndRun = (id) => {{ RunStatus = {typeof(DiagramRunStatus).FullName}.STOP; }};");
-
-            var startNode = FindStartNode();
-            var nodeVarName = $"m_{startNode.GetType().Name}_{startNode.ID}";
-            
-
-            strBuilder.AppendLine($"var track = new {typeof(GraphTrack).FullName}(ID, string.Empty, {nodeVarName}.ID);");
-            strBuilder.AppendLine($"vars.GraphTracker.RegisterTrack(track);");
-
-            strBuilder.AppendLine($"await {nodeVarName}.Run(track, vars, token);");
+            //initialize Flows
+            strBuilder.AppendLine("//flows");
+            foreach (var flow in Flows)
+            {
+                strBuilder.AppendLine($"XmlFlows.ListItems.Add(m_{flow.GetType().Name}_{flow.ID});");
+            }
 
             return strBuilder.ToString();
         }
@@ -342,6 +313,23 @@ namespace GxFlow.WorkflowEngine.Core
 
             return strBuilder.ToString();
         }
+
+        protected virtual string GenCodeFlowSourceCode(GraphVariable vars)
+        {
+            var strBuilder = new StringBuilder();
+
+            foreach (var flow in XmlFlows.ListItems)
+            {
+                var code = flow.ToCSharp(vars);
+                strBuilder.AppendLine(code);
+            }
+
+            return strBuilder.ToString();
+        }
+
+        protected virtual string GenCodeConstructorExtra(GraphVariable vars) { return string.Empty; }
+
+        protected virtual string GenCodeExtra(GraphVariable vars) { return string.Empty; }
     }
 
     [XmlRoot("diagram")]

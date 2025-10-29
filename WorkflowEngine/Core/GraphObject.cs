@@ -7,7 +7,7 @@ namespace GxFlow.WorkflowEngine.Core
         string ID { get; }
 
         string TypeName { get; }
-        
+
         string DisplayName { get; set; }
 
         string Note { get; set; }
@@ -15,11 +15,15 @@ namespace GxFlow.WorkflowEngine.Core
 
     public interface IGraphRunnableTracker
     {
+        Task Initialize(GraphVariable vars, CancellationToken token);
+
         Task Run(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
     }
 
     public interface IGraphRunnable
     {
+        Task Initialize(GraphVariable vars, CancellationToken token);
+
         Task Run(GraphVariable vars, CancellationToken token);
     }
 

@@ -6,7 +6,7 @@ namespace GxFlow.WorkflowEngine.Core
     {
         public SerializableDictionary()
         {
-            
+
         }
 
         [XmlIgnore]
@@ -42,12 +42,12 @@ namespace GxFlow.WorkflowEngine.Core
         {
             get
             {
-                return _dictionary.Select(kvp => new SerializableKeyValuePair<K,V>(kvp.Key, kvp.Value)).ToArray();
+                return _dictionary.Select(kvp => new SerializableKeyValuePair<K, V>(kvp.Key, kvp.Value)).ToArray();
             }
 
             set
             {
-                if(value is null)
+                if (value is null)
                     _dictionary = new Dictionary<K, V>();
                 else
                     _dictionary = value.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -68,7 +68,7 @@ namespace GxFlow.WorkflowEngine.Core
 
         public SerializableKeyValuePair(K key, V value)
         {
-            _key = key; 
+            _key = key;
             _value = value;
         }
 

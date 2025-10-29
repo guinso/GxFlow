@@ -13,7 +13,7 @@ namespace GxFlow.WorkflowEngine.Core
         public IEnumerable<PropertyInfo> Outputs { get; }
     }
 
-    public interface INodeExt: INode, IScriptTransformer
+    public interface INodeExt : INode, IScriptTransformer
     {
 
     }
@@ -22,6 +22,7 @@ namespace GxFlow.WorkflowEngine.Core
     public abstract class NodeBase : INodeExt
     {
         protected string _type = string.Empty;
+        protected INode _outgoingNode;
 
         [XmlAttribute("id")]
         public string ID { get; set; } = Guid.NewGuid().ToString("N");
@@ -50,49 +51,23 @@ namespace GxFlow.WorkflowEngine.Core
         public string Note { get; set; } = string.Empty;
 
         #region runnable
-        public virtual async Task Run(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
+        public virtual Task Initialize(GraphVariable vars, CancellationToken token)
         {
-            await RunInit(runInfo, vars, token);
+            InitOutgoingNode(vars);
 
-            await AssignInputs(runInfo, vars, token);
-
-            await RunContext(runInfo, vars, token);
-
-            await RunCleanUp(runInfo, vars, token);
-
-            await RunOutgoing(runInfo, vars, token);
+            return Task.CompletedTask;
         }
 
-        protected virtual async Task AssignInputs(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
+        public virtual Task Run(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
         {
-            var ins = Inputs;
-            foreach (var inputItem in ins)
-            {
-                var val = inputItem.GetValue(this) as IGraphProperty;
-                if (val != null)
-                {
-                    await val.EvalValue(runInfo, vars, token);
-                }
-            }
+            AssignInputs(runInfo, vars, token);
+
+            RunContext(runInfo, vars, token);
+
+            return RunOutgoing(runInfo, vars, token);
         }
 
-        protected abstract Task RunInit(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
-
-        protected abstract Task RunCleanUp(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
-
-        protected abstract Task RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
-
-        protected virtual async Task RunOutgoing(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
-        {
-            var node = FindNextSingleNode(vars);
-
-            var track = new GraphTrack(runInfo.DiagramID, ID, node.ID);
-            vars.GraphTracker.RegisterTrack(track);
-
-            await node.Run(track, vars, token);
-        }
-
-        protected virtual INode FindNextSingleNode(GraphVariable vars)
+        protected virtual void InitOutgoingNode(GraphVariable vars)
         {
             var nextNodes = vars.SearchNextNode(ID);
 
@@ -101,15 +76,40 @@ namespace GxFlow.WorkflowEngine.Core
             else if (nextNodes.Count() > 1)
                 throw new Exception($"More than one flows define for {GetType().Name}({ID})");
             else
+                _outgoingNode = nextNodes.First();
+        }
+
+        protected virtual void AssignInputs(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
+        {
+            var ins = Inputs;
+            foreach (var inputItem in ins)
             {
-                return nextNodes.First();
+                var val = inputItem.GetValue(this) as IGraphProperty;
+                if (val != null)
+                {
+                    val.EvalValue(runInfo, vars, token).Wait();
+                }
             }
+        }
+
+        protected abstract void RunContext(GraphTrack runInfo, GraphVariable vars, CancellationToken token);
+
+        protected virtual Task RunOutgoing(GraphTrack runInfo, GraphVariable vars, CancellationToken token)
+        {
+            if (_outgoingNode is null)
+                throw new NullReferenceException(nameof(_outgoingNode));
+
+            var track = new GraphTrack(runInfo.DiagramID, ID, _outgoingNode.ID);
+            vars.GraphTracker.RegisterTrack(track);
+
+            return _outgoingNode.Run(track, vars, token);
         }
         #endregion
 
         #region inputs and outputs
         [XmlIgnore]
-        public IEnumerable<PropertyInfo> Inputs { 
+        public IEnumerable<PropertyInfo> Inputs
+        {
             get
             {
                 List<PropertyInfo> meta = new List<PropertyInfo>();
@@ -143,77 +143,33 @@ namespace GxFlow.WorkflowEngine.Core
         #region code generation
         public virtual string ToCSharp(GraphVariable vars)
         {
-            string propertyInfoTypeName = typeof(PropertyInfo).FullName;
-            string GraphTrackTypeName = typeof(GraphTrack).FullName;
-            string varsTypeName = typeof(GraphVariable).FullName;
+            return $@"public class {GetType().Name}_{ID} : {GetType().Name} {{
+                public {GetType().Name}_{ID}(){{
+                    ID = ""{ID}"";
+                    DisplayName = ""{DisplayName}"";
+                    Note = ""{Note}"";
+        
+                    {GenCodeInitInputs(vars)}
 
-            return @$"
-            public class {GetType().Name}_{ID} : {typeof(INode).FullName}
-            {{
-                protected List<{propertyInfoTypeName}> _inputProps = new List<{propertyInfoTypeName}>();
-                protected List<{propertyInfoTypeName}> _outputProps = new List<{propertyInfoTypeName}>();
-
-                public string ID => ""{ID}"";
-
-                public string TypeName => ""{GetType().Name}_{ID}"";
-
-                public string DisplayName {{ get; set; }} = string.Empty;
-
-                public string Note {{ get; set; }} = string.Empty;
-
-                public {GetType().Name}_{ID}() 
-                {{
-                    {GenCodePropInfoInit()}
+                    {GenCodeConstructorExtra(vars)}
                 }}
 
-                public async Task Run({GraphTrackTypeName} RunInfo, {varsTypeName} Vars, CancellationToken token)
+                public override Task Run(GraphTrack RunInfo, GraphVariable Vars, CancellationToken token)
                 {{
-                    //handle input
-                    {GenCodeHandleInputAssignment(vars)}
+                    {GenCodeAssignDynamicInputs(vars)}
 
-                    //handle process
-                    {GenCodeContext(vars)}
+                    {GenCodeRunContext(vars)}
 
-                    //handle call next node
-                    {GenCodeHandleOutgoing(vars)}              
+                    {GenCodeRunOutgoing(vars)}
                 }}
+
+                {GenCodeDynamicInputDefinition(vars)}
 
                 {GenCodeExtra(vars)}
-
-                {GenCodeInputProp()}
-
-                {GenCodeOutputProp()}
-
-                public IEnumerable<{propertyInfoTypeName}> Inputs => _inputProps;
-
-                public IEnumerable<{propertyInfoTypeName}> Outputs => _outputProps;
-            }}
-            ";
+            }}";
         }
 
-        protected virtual string GenCodePropInfoInit()
-        {
-            var strBuilder = new StringBuilder();
-
-            foreach (var prop in Inputs)
-            {
-                strBuilder.AppendLine($"_inputProps.Add(GetType().GetProperty(nameof({prop.Name})));");
-
-            }
-
-            strBuilder.AppendLine();
-
-            foreach (var prop in Outputs)
-            {
-                strBuilder.AppendLine($"_outputProps.Add(GetType().GetProperty(nameof({prop.Name})));");
-            }
-
-            return strBuilder.ToString();
-        }
-
-        protected abstract string GenCodeExtra(GraphVariable vars);
-
-        protected virtual string GenCodeHandleInputAssignment(GraphVariable vars)
+        protected virtual string GenCodeInitInputs(GraphVariable vars)
         {
             StringBuilder strBuilder = new StringBuilder();
             foreach (var propInfo in Inputs)
@@ -222,16 +178,44 @@ namespace GxFlow.WorkflowEngine.Core
                 if (prop is null)
                     throw new NullReferenceException($"Input property {propInfo.Name} cannot cast to {nameof(IGraphProperty)}");
 
-                if (string.IsNullOrEmpty(prop.BindPath) == false)
+                string codeValue = CSharpHelper.ToCode(prop.GetValue());
+                strBuilder.AppendLine($"{propInfo.Name}.Value = {codeValue};");
+            }
+
+            return strBuilder.ToString();
+        }
+
+        protected virtual string GenCodeAssignDynamicInputs(GraphVariable vars)
+        {
+            StringBuilder strBuilder = new StringBuilder();
+            var ins = Inputs;
+            foreach (var propInfo in ins)
+            {
+                var prop = propInfo.GetValue(this) as IGraphProperty;
+                if (prop != null)
                 {
-                    strBuilder.AppendLine($"{propInfo.Name} = Get{propInfo.Name}(Vars);");
+                    if (string.IsNullOrEmpty(prop.BindPath) == false)
+                    {
+                        strBuilder.AppendLine(@$"{propInfo.Name}.Value = Get{propInfo.Name}(Vars);");
+                        strBuilder.AppendLine();
+                    }
                 }
             }
 
             return strBuilder.ToString();
         }
 
-        protected virtual string GenCodeInputProp()
+        protected virtual string GenCodeRunContext(GraphVariable vars)
+        {
+            return "RunContext(RunInfo, Vars, token);";
+        }
+
+        protected virtual string GenCodeRunOutgoing(GraphVariable vars)
+        {
+            return "return RunOutgoing(RunInfo, Vars, token);";
+        }
+
+        protected virtual string GenCodeDynamicInputDefinition(GraphVariable vars)
         {
             StringBuilder strBuilder = new StringBuilder();
             strBuilder.AppendLine("#region inputs");
@@ -242,23 +226,13 @@ namespace GxFlow.WorkflowEngine.Core
                 var prop = propInfo.GetValue(this) as IGraphProperty;
                 if (prop != null)
                 {
-                    strBuilder.Append($"public {prop.ValueType.FullName} {propInfo.Name} {{ get; set; }}");
-
-                    if (string.IsNullOrEmpty(prop.BindPath))
+                    if (string.IsNullOrEmpty(prop.BindPath) == false)
                     {
-                        string codeVal = CSharpHelper.ToCode(prop.GetValue());
-                        strBuilder.AppendLine($" = {codeVal};");
-                    }
-                    else
-                    {
-                        strBuilder.AppendLine();
-                        strBuilder.AppendLine();
-                        strBuilder.AppendLine(@$"protected {prop.ValueType.FullName} Get{propInfo.Name}({typeof(GraphVariable).FullName} Vars){{ 
+                        strBuilder.AppendLine(@$"protected {CSharpHelper.ToTypeName(prop.ValueType)} Get{propInfo.Name}(GraphVariable Vars){{ 
                             {prop.BindPath} 
                         }}");
+                        strBuilder.AppendLine();
                     }
-
-                    strBuilder.AppendLine();
                 }
             }
             strBuilder.AppendLine("#endregion");
@@ -266,35 +240,9 @@ namespace GxFlow.WorkflowEngine.Core
             return strBuilder.ToString();
         }
 
-        protected virtual string GenCodeOutputProp()
-        {
-            StringBuilder strBuilder = new StringBuilder();
-            strBuilder.AppendLine("#region outputs");
+        protected virtual string GenCodeConstructorExtra(GraphVariable vars) { return string.Empty; }
 
-            var outs = Outputs;
-            foreach (var prop in outs)
-            {
-                strBuilder.AppendLine($"public {prop.PropertyType.FullName} {prop.Name} {{ get; set; }}");
-                strBuilder.AppendLine();
-            }
-            strBuilder.AppendLine("#endregion");
-
-            return strBuilder.ToString();
-        }
-
-        protected virtual string GenCodeHandleOutgoing(GraphVariable vars)
-        {
-            var node = FindNextSingleNode(vars);
-            string graphTrackTypeName = typeof(GraphTrack).FullName;
-
-            return @$"
-                var track = new {graphTrackTypeName}(RunInfo.DiagramID, ID, ""{node.ID}"");
-                Vars.GraphTracker.RegisterTrack(track);
-
-                await Vars.Nodes[""{ node.ID}""].Run(track, Vars, token);";
-        }
-
-        protected abstract string GenCodeContext(GraphVariable vars);
+        protected virtual string GenCodeExtra(GraphVariable vars) { return string.Empty; }
         #endregion
     }
 }

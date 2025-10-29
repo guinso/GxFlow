@@ -10,7 +10,7 @@ namespace GxFlow.WorkflowEngine.Core
         public string ToID { get; set; }
     }
 
-    public interface IFlowExt: IFlow
+    public interface IFlowExt : IFlow, IScriptTransformer
     {
 
     }
@@ -52,7 +52,21 @@ namespace GxFlow.WorkflowEngine.Core
         [XmlAttribute("to")]
         public string ToID { get; set; } = string.Empty;
 
-        public abstract void OnDeserialization(object? sender);
+        public string ToCSharp(GraphVariable vars)
+        {
+            return $@"
+            public class {GetType().Name}_{ID} : {GetType().Name} 
+            {{
+                public {GetType().Name}_{ID}() {{
+                    ID = ""{ID}"";
+                    DisplayName = ""{DisplayName}"";
+                    Note = ""{Note}"";
+
+                    FromID = ""{FromID}"";
+                    ToID = ""{ToID}"";
+                }}
+            }}";
+        }
     }
 
     [XmlRoot("flow")]
@@ -73,11 +87,6 @@ namespace GxFlow.WorkflowEngine.Core
         {
             FromID = fromNode.ID;
             ToID = toNode.ID;
-        }
-
-        public override void OnDeserialization(object? sender)
-        {
-            return;
         }
     }
 }
