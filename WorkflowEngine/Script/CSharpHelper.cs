@@ -14,7 +14,7 @@ namespace GxFlow.WorkflowEngine.Script
     public class CSharpHelper
     {
         private static List<MetadataReference> s_asmRef = new List<MetadataReference>();
-        private static readonly List<string> s_standardNamespaces = [
+        public static readonly List<string> StandardNamespaces = [
             "System",
             "System.Linq",
             "System.Collections.Generic",
@@ -35,7 +35,7 @@ namespace GxFlow.WorkflowEngine.Script
 #endif
 
             var opt = ScriptOptions.Default
-                .AddImports(s_standardNamespaces);
+                .AddImports(StandardNamespaces);
 
             var references = GetAssemblyReference();
             opt = opt.AddReferences(references);
@@ -48,6 +48,27 @@ namespace GxFlow.WorkflowEngine.Script
                 token);
 
             return ret.ReturnValue;
+        }
+
+        public static async Task Eval(string script, GraphTrack runInfo, GraphVariable vars, CancellationToken token)
+        {
+#if DEBUG
+            Console.WriteLine("Eval script:-");
+            Console.WriteLine(script);
+#endif
+
+            var opt = ScriptOptions.Default
+                .AddImports(StandardNamespaces);
+
+            var references = GetAssemblyReference();
+            opt = opt.AddReferences(references);
+
+            var ret = await CSharpScript.RunAsync(
+                script,
+                opt,
+                new GraphVariableWrapper(runInfo, vars),
+                typeof(GraphVariableWrapper),
+                token);
         }
 
         public static string ToCode(object obj)
@@ -140,7 +161,7 @@ namespace GxFlow.WorkflowEngine.Script
             var compileOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithOverflowChecks(true)
                 .WithOptimizationLevel(OptimizationLevel.Release)
-                .WithUsings(s_standardNamespaces);
+                .WithUsings(StandardNamespaces);
 
             var references = GetAssemblyReference();
 

@@ -83,11 +83,12 @@ namespace TestWorkflowEngine.Core
             var fullCode = CSharpHelper.GenerateNamespace(diagram.ID, code);
 
             var (appDomain, obj) = CSharpHelper.CompileAndLoadInstance([fullCode], $"GxFlow.WorkflowEngine.Compiled_{diagram.ID}.Diagram_{diagram.ID}");
-            var instance = obj as IDiagram;
+            var instance = obj as Diagram;
             Assert.IsNotNull(instance);
 
-            instance.Initialize(new GraphVariable(), CancellationToken.None).Wait();
-            instance.Run(new GraphVariable(), CancellationToken.None).Wait();
+            vars = instance.MakeVars();
+            instance.Initialize(vars, CancellationToken.None).Wait();
+            instance.Run(vars, CancellationToken.None).Wait();
 
             appDomain.Unload();
         }
@@ -96,9 +97,10 @@ namespace TestWorkflowEngine.Core
         public void TestRun()
         {
             var diagram = MakeDiagramInstance();
+            var vars = diagram.MakeVars();
 
-            diagram.Initialize(new GraphVariable(), CancellationToken.None).Wait();
-            diagram.Run(new GraphVariable(), CancellationToken.None).Wait();
+            diagram.Initialize(vars, CancellationToken.None).Wait();
+            diagram.Run(vars, CancellationToken.None).Wait();
         }
     }
 }

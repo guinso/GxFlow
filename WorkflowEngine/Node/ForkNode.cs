@@ -35,11 +35,7 @@ namespace GxFlow.WorkflowEngine.Node
                     throw new NullReferenceException($"No matching flow found; from ID {ID}, to ID {item}");
                 }
 
-                var node = vars.Nodes[item];
-                var track = new GraphTrack(runInfo.DiagramID, ID, item);
-                vars.GraphTracker.RegisterTrack(track);
-
-                node.Run(track, vars, token);
+                vars.GotoNode(item,runInfo, token);
             }
         }
 

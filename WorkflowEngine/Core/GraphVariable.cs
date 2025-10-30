@@ -4,6 +4,8 @@ namespace GxFlow.WorkflowEngine.Core
 {
     public class GraphVariable
     {
+        public string DiagramID { get; set; } = string.Empty;
+
         public IGraphTracker GraphTracker { get; set; } = new GraphTracker();
 
         #region variables
@@ -40,6 +42,20 @@ namespace GxFlow.WorkflowEngine.Core
         }
 
         public Action<string> EndRun { get; set; } = (nodeID) => { };
+
+        public Task GotoNode(string nodeID, GraphTrack runInfo, CancellationToken token)
+        {
+            if (Nodes.ContainsKey(nodeID) == false)
+                throw new NullReferenceException($"Target node ID ({nodeID}) not found");
+            else if (Flows.Count(x => x.FromID == runInfo.ToID && x.ToID == nodeID) == 0)
+                throw new NullReferenceException($"No control flow define from ({runInfo.ToID}), to ({nodeID})");
+
+            var node = Nodes[nodeID];
+            var track = new GraphTrack(runInfo.DiagramID, runInfo.ToID, nodeID);
+            GraphTracker.RegisterTrack(track);
+
+            return node.Run(track, this, token);
+        }
         #endregion
     }
 

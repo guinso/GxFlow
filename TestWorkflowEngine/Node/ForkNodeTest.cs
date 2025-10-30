@@ -64,11 +64,12 @@ namespace TestWorkflowEngine.Node
             var fullCode = CSharpHelper.GenerateNamespace(diagram.ID, code);
 
             var (appDomain, obj) = CSharpHelper.CompileAndLoadInstance([fullCode], $"GxFlow.WorkflowEngine.Compiled_{diagram.ID}.Diagram_{diagram.ID}");
-            var instance = obj as IDiagram;
+            var instance = obj as Diagram;
             Assert.IsNotNull(instance);
 
-            await instance.Initialize(new GraphVariable(), CancellationToken.None);
-            await instance.Run(new GraphVariable(), CancellationToken.None);
+            vars = instance.MakeVars();
+            await instance.Initialize(vars, CancellationToken.None);
+            await instance.Run(vars, CancellationToken.None);
 
             appDomain.Unload();
         }

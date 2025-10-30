@@ -42,7 +42,6 @@ namespace GxFlow.WorkflowEngine.Core
         protected string _type = string.Empty;
         protected Task _task = Task.CompletedTask;
         protected INode _startNode;
-        protected GraphVariable _vars = new GraphVariable();
 
         [XmlAttribute("id")]
         public string ID { get; set; } = Guid.NewGuid().ToString("N");
@@ -97,15 +96,12 @@ namespace GxFlow.WorkflowEngine.Core
         {
             _startNode = FindStartNode();
 
-            _vars = MakeVars();
-            _vars.EndRun = (id) => { RunStatus = DiagramRunStatus.STOP; };
-
-            var globalVars = MakeVars();
+            vars = MakeVars(vars);
 
             var tasks = new List<Task>();
             foreach (var node in Nodes)
             {
-                tasks.Add(node.Initialize(globalVars, token));
+                tasks.Add(node.Initialize(vars, token));
             }
 
             Task.WaitAll(tasks);
@@ -132,9 +128,9 @@ namespace GxFlow.WorkflowEngine.Core
             try
             {
                 var track = new GraphTrack(ID, string.Empty, _startNode.ID);
-                _vars.GraphTracker.RegisterTrack(track);
+                vars.GraphTracker.RegisterTrack(track);
 
-                await _startNode.Run(track, _vars, token);
+                await _startNode.Run(track, vars, token);
 
                 while (!token.IsCancellationRequested && RunStatus == DiagramRunStatus.RUNNING)
                 {
@@ -171,9 +167,15 @@ namespace GxFlow.WorkflowEngine.Core
             return startNodes.First();
         }
 
-        public GraphVariable MakeVars()
+        public GraphVariable MakeVars(GraphVariable? vars = null)
         {
-            var vars = new GraphVariable { Variables = Variables };
+            if(vars is null)
+                vars = new GraphVariable();
+
+            vars.DiagramID = ID;
+
+            vars.Variables = Variables;
+
             foreach (var node in Nodes)
             {
                 vars.Nodes[node.ID] = node;
@@ -183,6 +185,8 @@ namespace GxFlow.WorkflowEngine.Core
             {
                 vars.Flows.Add(flow);
             }
+
+            vars.EndRun = id => RunStatus = DiagramRunStatus.STOP;
 
             return vars;
         }
@@ -198,7 +202,7 @@ namespace GxFlow.WorkflowEngine.Core
             string diagramStatusTypeName = typeof(DiagramRunStatus).FullName;
             string serializableTypeName = "GxFlow.WorkflowEngine.Core.SerializableDictionary<string, object>";
 
-            vars = MakeVars();
+            vars = MakeVars(vars);
 
             string code = @$"
             public class {diagramClasName}: {GetType().Name} {{
