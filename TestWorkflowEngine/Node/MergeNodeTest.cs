@@ -18,9 +18,6 @@ namespace TestWorkflowEngine.Node
             var script2 = new ScriptNode("return \"abc\";");
             var script3 = new ScriptNode("return 12.67;");
 
-            fork.Targets.Value = [script1.ID, script2.ID, script3.ID];
-            merge.Receives.Value = [script1.ID, script2.ID, script3.ID];
-
             var diagram = new Diagram();
             diagram.XmlNodes.ListItems = [startNode, endNode, fork, merge, script1, script2, script3];
             diagram.XmlFlows.ListItems = [
@@ -81,15 +78,10 @@ namespace TestWorkflowEngine.Node
 
             var node = new MergeNode();
             node.DisplayName = expectedName;
-            node.Receives.Value = ["123", "456"];
 
             TestHelper.XmlSerialize(node, actual =>
             {
                 Assert.AreEqual(expectedName, actual.DisplayName);
-
-                Assert.AreEqual(2, actual.Receives.Value.Count);
-
-                Assert.AreEqual("123", actual.Receives.Value[0]);
             });
         }
     }

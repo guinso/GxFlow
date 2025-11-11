@@ -1,6 +1,7 @@
 ﻿using GxFlow.WorkflowEngine.Core;
 using GxFlow.WorkflowEngine.Node;
 using GxFlow.WorkflowEngine.Script;
+using GxFlow.WorkflowEngine.Trail;
 
 namespace TestWorkflowEngine.Node
 {
@@ -18,20 +19,17 @@ namespace TestWorkflowEngine.Node
             var script2 = new ScriptNode("return \"abc\";");
             var script3 = new ScriptNode("return 12.67;");
 
-            fork.Targets.Value = [script1.ID, script2.ID, script3.ID];
-            merge.Receives.Value = [script1.ID, script2.ID, script3.ID];
-
             var diagram = new Diagram();
             diagram.XmlNodes.ListItems = [startNode, endNode, fork, merge, script1, script2, script3];
             diagram.XmlFlows.ListItems = [
                 new Flow(startNode, fork),
-                new Flow(merge, endNode),
                 new Flow(fork, script1),
                 new Flow(fork, script2),
                 new Flow(fork, script3),
                 new Flow(script1, merge),
                 new Flow(script2, merge),
-                new Flow(script3, merge)
+                new Flow(script3, merge),
+                new Flow(merge, endNode)
             ];
 
             return (diagram, script1, script2, script3);
@@ -42,7 +40,7 @@ namespace TestWorkflowEngine.Node
         {
             var (diagram, script1, script2, script3) = MakeDiagram();
 
-            var vars = new GraphVariable();
+            var vars = diagram.MakeVars();
 
             await diagram.Initialize(vars, CancellationToken.None);
             await diagram.Run(vars, CancellationToken.None);
@@ -81,15 +79,10 @@ namespace TestWorkflowEngine.Node
 
             var node = new ForkNode();
             node.DisplayName = expectedName;
-            node.Targets.Value = ["123", "456"];
 
             TestHelper.XmlSerialize(node, actual =>
             {
                 Assert.AreEqual(expectedName, actual.DisplayName);
-
-                Assert.AreEqual(2, actual.Targets.Value.Count);
-
-                Assert.AreEqual("123", actual.Targets.Value[0]);
             });
         }
     }

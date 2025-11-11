@@ -181,6 +181,7 @@ namespace GxFlow.WorkflowEngine.Core
                 vars.Nodes[node.ID] = node;
             }
 
+            vars.Flows.Clear();
             foreach (var flow in Flows)
             {
                 vars.Flows.Add(flow);

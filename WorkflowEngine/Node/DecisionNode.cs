@@ -16,11 +16,11 @@ namespace GxFlow.WorkflowEngine.Node
 
         [XmlElement("prescript")]
         [GraphInput("prescript")]
-        public GraphProperty<string> PreScript { get; set; } = new GraphProperty<string>();
+        public GraphProperty<string> PreScript { get; set; } = new GraphProperty<string>(string.Empty);
 
         [XmlElement("criteria")]
         [GraphInput("criteria")]
-        public GraphProperty<List<DecisionCriteria>> Criteria { get; set; } = new GraphProperty<List<DecisionCriteria>>();
+        public GraphProperty<List<DecisionCriteria>> Criteria { get; set; } = new GraphProperty<List<DecisionCriteria>>(new List<DecisionCriteria>());
 
         public override Task Initialize(GraphVariable vars, CancellationToken token)
         {
