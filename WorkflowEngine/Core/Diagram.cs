@@ -174,8 +174,10 @@ namespace GxFlow.WorkflowEngine.Core
 
             vars.DiagramID = ID;
 
-            vars.Variables = Variables;
+            foreach(var key in Variables.GetKeys())
+                vars.Variables[key] = Variables[key];
 
+            vars.Nodes.Clear();
             foreach (var node in Nodes)
             {
                 vars.Nodes[node.ID] = node;

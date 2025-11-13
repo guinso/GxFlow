@@ -26,6 +26,8 @@
     {
         void RegisterTrack(GraphTrack track);
 
+        void ClearTracks();
+
         IEnumerable<string> FindCaller(string diagramID, string destinyID);
 
         IEnumerable<GraphTrack> Trails { get; }
@@ -46,6 +48,11 @@
         public void RegisterTrack(GraphTrack track)
         {
             _tracks.Add(track);
+        }
+
+        public void ClearTracks()
+        {
+            _tracks.Clear();
         }
     }
 }
